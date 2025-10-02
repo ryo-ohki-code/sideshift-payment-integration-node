@@ -139,15 +139,6 @@ await shiftProcessor.updateCoinsList(ICON_PATH)
 shiftProcessor.updateCoinsList(ICON_PATH).then((response) => {
     console.log('Initial coins list loaded');
 	availableCoins = response.availableCoins;
-
-    // Check if configuration coins are supported by sideshift
-    const isValidCoin_1 = shiftProcessor.isCoinValid(MAIN_COIN);
-    const isValidCoin_2 = shiftProcessor.isCoinValid(SECONDARY_COIN);
-
-    if (!isValidCoin_1 || !isValidCoin_2) {
-        console.error("Invalid configuration coin", MAIN_COIN, SECONDARY_COIN)
-        process.exit(1);
-    }
     
     // Start server
     https.createServer(options, app).listen(PORT, () => {
@@ -172,11 +163,6 @@ const inputCoin = ['BNB-bsc', false]; // ['COIN-network', "Memo_here" || false]
 const outputChoise = shiftGateway.getDestinationWallet(inputCoin); 
 ```
 
-You can also test if an input coin is a valid Sideshift API coin using, return null if not supported:
-```
-shiftProcessor.isCoinValid("ETH-bitcoin") // false
-shiftProcessor.isCoinValid("ETH-ethereum") // true
-```
 
 ### Convert FIAT amount to cryptocurrency amount
 Parameters 
@@ -196,40 +182,6 @@ Parameters
 ```
 const getPairData = await shiftGateway.sideshift.getPair(from, to);
 ```
-
-
-### Create quote preview
-This function helps to get all necessary data at once
-
-Parameters 
-totalFiat (e.g., 100.05)
-depositCoinNetwork (e.g., ETH-ethereum)
-```
-const data = await shiftProcessor.getDepositAmountAndSettleAddressAndRatio(Number(totalFiat), depositCoinNetwork); 
-```
-
-return
-```
-{
-  settleData: { // Your destination wallet information
-    coin: 'USDT',
-    network: 'bsc',
-    address: '0x...',
-    isMemo: [ false, '' ]
-  },
-  depositAmount: '124.02480000',
-  pairData: { // Shift pair data
-    min: '7.290191898306',
-    max: '72901.91898306',
-    rate: '0.403726247797',
-    depositCoin: 'ARB',
-    settleCoin: 'USDT',
-    depositNetwork: 'arbitrum',
-    settleNetwork: 'bsc'
-  }
-}
-```
-
 
 ### Create invoice shift 
 Parameters 
