@@ -1,0 +1,21 @@
+//- Error page
+doctype html
+html 
+	head 
+		if(error)
+			title #{error.title}
+		else
+			title Error
+		
+		meta( name="robots" content="noindex")
+		meta(name="viewport" content="width=device-width, initial-scale=1.0")
+		link(rel='stylesheet' href='/main.css')
+
+	body 
+
+		if(error)
+			h1 #{error.title}
+			p #{error.message}
+
+		else 
+			p Unknown error
