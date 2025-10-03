@@ -1,5 +1,4 @@
 // Sideshift API payment integration Node.js - Demo shop
-
 require('dotenv').config({ quiet: true }); //  debug: true 
 
 const express = require('express');
@@ -100,7 +99,6 @@ const SECONDARY_WALLET = {
 	isMemo: [false, ""]
 };
 
-// other structure isMemo: { enabled: true, value: "YourMemoHere" }
 
 
 const MAIN_COIN = `${MAIN_WALLET.coin}-${MAIN_WALLET.network}`;
@@ -125,7 +123,7 @@ const verbose = SIDESHIFT_CONFIG.verbose;
 
 // Load the crypto payment processor
 const ShiftProcessor = require('./ShiftProcessor.js');
-const shiftProcessor = new ShiftProcessor({WALLETS, MAIN_COIN, SECONDARY_COIN, SIDESHIFT_CONFIG, SHOP_SETTING});
+const shiftProcessor = new ShiftProcessor({wallets: WALLETS, sideshiftConfig: SIDESHIFT_CONFIG, currencySetting: SHOP_SETTING});
 
 // Load the payment poller system
 const PaymentPoller = require('./CryptoPaymentPoller.js');
@@ -163,6 +161,19 @@ async function checkOrderStatus(shift, settleAddress, amount, invoiceId) {
 }
 
 
+// Demo database
+function createDemoCostumer(orderId, total, settleAmount, payWithCoin, memo) {
+  		fakeShopDataBase[orderId] = fakeInvoice;
+		fakeShopDataBase[orderId].id = orderId;
+		fakeShopDataBase[orderId].total = total;
+		fakeShopDataBase[orderId].status = "created";
+		fakeShopDataBase[orderId].cryptoPaymentOption = "crypto";
+		fakeShopDataBase[orderId].cryptoPaymentStatus = "waiting";
+		fakeShopDataBase[orderId].cryptoTotal = settleAmount;
+		fakeShopDataBase[orderId].payWith = payWithCoin;
+		fakeShopDataBase[orderId].isMemo = String(memo);
+}
+
 
 // Website routes
 
@@ -176,19 +187,6 @@ app.get("/selection", rateLimiter, function(req,res) {
         res.render('error', { error: {title: "Settle Wallet Error", message: err.message} });
     }
 });
-
-
-function createDemoCostumer(orderId, total, settleAmount, payWithCoin, memo) {
-  		fakeShopDataBase[orderId] = fakeInvoice;
-		fakeShopDataBase[orderId].id = orderId;
-		fakeShopDataBase[orderId].total = total;
-		fakeShopDataBase[orderId].status = "created";
-		fakeShopDataBase[orderId].cryptoPaymentOption = "crypto";
-		fakeShopDataBase[orderId].cryptoPaymentStatus = "waiting";
-		fakeShopDataBase[orderId].cryptoTotal = settleAmount;
-		fakeShopDataBase[orderId].payWith = payWithCoin;
-		fakeShopDataBase[orderId].isMemo = String(memo);
-}
 
 
 app.post("/create-quote", paymentLimiter, async function(req,res) {
@@ -404,25 +402,23 @@ app.get("/cancel/:id_shift/:id_invoice", rateLimiter, handleCryptoShift, async (
     }
 });
 
+app.get("/cancel-shift/:id_shift/:id_invoice", rateLimiter, handleCryptoShift, async (req, res) => {
+    try {
+        if (req.shift.status === SIDESHIFT_PAYMENT_STATUS.waiting) {
 
+            // TODO check if more than 5min since creation, then set timer before cancel on serverside.
 
-// app.get("/cancel-shift/:id_shift/:id_invoice", rateLimiter, handleCryptoShift, async (req, res) => {
-//     try {
-//         if (req.shift.status === SIDESHIFT_PAYMENT_STATUS.waiting) {
-
-//             // check if more than 5min since creation, then set timer before cancel on serverside. set cancel status to unlock cancel page and redirect to page
-
-//             resetCryptoPayment(req.invoice.id, req.shift.id, "Canceled_by_User");
-//             await cryptoPoller.stopPollingForShift(req.shift.id);
-//             res.redirect(`/cancel/${req.shift.id}/${req.invoice.id}`);
-//         } else{
-//             res.redirect("/payment-status/"+req.shift.id+"/"+req.invoice.id)
-//         }
-//     } catch (err) {
-//         if (verbose) console.error("Error in cancel-shift route:", err);
-//         res.status(500).send("Error: " + err.message);
-//     }
-// });
+            resetCryptoPayment(req.invoice.id, req.shift.id, "Canceled_by_User");
+            await cryptoPoller.stopPollingForShift(req.shift.id);
+            res.redirect(`/cancel/${req.shift.id}/${req.invoice.id}`);
+        } else{
+            res.redirect("/payment-status/"+req.shift.id+"/"+req.invoice.id)
+        }
+    } catch (err) {
+        if (verbose) console.error("Error in cancel-shift route:", err);
+        res.status(500).send("Error: " + err.message);
+    }
+});
 
 
 
