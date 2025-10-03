@@ -1,0 +1,76 @@
+//- Coins Select Option
+
+if(coinsDepositList)
+	- coinsDepositList.sort((a, b) => a[0].localeCompare(b[0]));
+
+	- var networks = []
+	- coinsDepositList.forEach(coin => {
+		- var network = coin[0].split('-')[1]
+		- if (!networks.includes(network)) {
+			- networks.push(network)
+		- }
+	- })
+	- networks.sort((a, b) => a[0].localeCompare(b[0]));
+
+	label Select Coin Network (#{networks.length})
+	br
+	select(name="network_filter")
+		option(value="all" selected) All Networks
+			- networks.forEach(network => {
+			option(value=network)= network
+		- })
+
+	br
+	br
+	label#text Select Coin
+	br
+	select(name="pay_with")
+		each coin in coinsDepositList
+			option(value=coin) #{coin[0]}
+			//- option(value=coin) #{coin[0].split('-')[0]}
+
+script.
+	document.addEventListener('DOMContentLoaded', function() {
+		const networkSelect = document.querySelector('select[name="network_filter"]');
+		const payWithSelect = document.querySelector('select[name="pay_with"]');
+
+		// Function to filter options based on selected network
+		function filterOptions() {
+			const selectedNetwork = networkSelect.value;
+
+			// Get all options from the pay_with select
+			const options = Array.from(payWithSelect.options);
+			let firstVisibleOption = null;
+			let counter = 0;
+
+			options.forEach(option => {
+				const optionValue = JSON.parse(option.value); 
+				const optionNetwork = optionValue[0].split('-')[1];
+				const optionVisibility = optionValue[2];
+				if (selectedNetwork === 'all' || optionNetwork === selectedNetwork) {
+					option.style.display = '';
+					if (firstVisibleOption === null) {
+						firstVisibleOption = option.value;
+					}
+					if(optionVisibility === false){
+						option.disabled = true;
+					}
+					counter++;
+				} else {
+					option.style.display = 'none';
+				}
+			});
+			document.getElementById('text').innerText = "Select coin ("+counter+")";
+			
+			// Update select value to first visible option if we have one
+			if (firstVisibleOption !== null) {
+			payWithSelect.value = firstVisibleOption;
+			}
+		}
+
+		networkSelect.addEventListener('change', filterOptions);
+
+		filterOptions();
+	});
+
+
