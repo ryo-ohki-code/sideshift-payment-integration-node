@@ -1,15 +1,15 @@
 const fs = require('fs');
 
 class ShiftProcessor {
-    constructor({ WALLETS, MAIN_COIN, SECONDARY_COIN, SIDESHIFT_CONFIG, SHOP_SETTING }) {
+    constructor({ wallets = {}, sideshiftConfig, currencySetting = { currency: "USD", USD_REFERENCE_COIN: "USDT-bsc" } }) {
         // Initialize Sideshift API
         try {
-            const SideshiftAPI = require(SIDESHIFT_CONFIG.path);
+            const SideshiftAPI = require(sideshiftConfig.path);
             this.sideshift = new SideshiftAPI({
-                secret: SIDESHIFT_CONFIG.secret,
-                id: SIDESHIFT_CONFIG.id,
-                commissionRate: SIDESHIFT_CONFIG.commissionRate,
-                verbose: SIDESHIFT_CONFIG.verbose
+                secret: sideshiftConfig.secret,
+                id: sideshiftConfig.id,
+                commissionRate: sideshiftConfig.commissionRate,
+                verbose: sideshiftConfig.verbose
             });
         } catch (error) {
             console.error('Error initializing Sideshift API:', error);
@@ -18,17 +18,17 @@ class ShiftProcessor {
         }
 
         // Use same verbose config 
-        this.verbose = SIDESHIFT_CONFIG.verbose;
+        this.verbose = sideshiftConfig.verbose;
 
         // set variables, shop locale data, coins list and wallets
         this.availableCoins = null;
         this.lastCoinList = [];
         this.USD_CoinsList = null;
 
-        this.WALLETS = WALLETS;
-        this.MAIN_COIN = MAIN_COIN;
-        this.SECONDARY_COIN = SECONDARY_COIN;
-        this.SHOP_SETTING = SHOP_SETTING;
+        this.WALLETS = wallets;
+        this.MAIN_COIN = Object.keys(this.WALLETS)[0] || "no_wallet";
+        this.SECONDARY_COIN = Object.keys(this.WALLETS)[1] || "no_wallet";
+        this.SHOP_SETTING = currencySetting;
 
         // IP regex
         this.ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
@@ -137,7 +137,7 @@ class ShiftProcessor {
     }
 
     // Get the Usd conversion rate
-    async getUSDRate() {
+    async getFiatExchangeRate() {
         try {
             const getRates = await fetch(this.EXCHANGE_RATE_API_URL, {
                 headers: { "Content-Type": "application/json" },
@@ -151,7 +151,7 @@ class ShiftProcessor {
             const ratesObj = await getRates.json();
             return Number(ratesObj.rates.USD);
         } catch (error) {
-            if (this.verbose) console.error('Error in getUSDRate:', error);
+            if (this.verbose) console.error('Error in getFiatExchangeRate:', error);
             throw error;
         }
     }
@@ -229,13 +229,13 @@ class ShiftProcessor {
         let amount;
 
         // Convert FIAT to USD
-        const usdRate = await this.getUSDRate();
-        let amountInUsd = Number(amountToShift) * usdRate;
-        amountInUsd = amountInUsd * 1.0002; // total + 0.02% to compensate shift and network cost.
+        const fiatExchangeRate = await this.getFiatExchangeRate();
+        let amountFiat = Number(amountToShift) * fiatExchangeRate;
+        amountFiat = amountFiat * 1.0002; // total + 0.02% to compensate shift and network cost.
 
         // Test is settleCoin is a stable coin
         if (this._isUsdBased(settleCoin)) {
-            amount = amountInUsd;
+            amount = amountFiat;
         } else {
             // If not stable coin then calculate appropriate ratio for the shift
             const ratio = await this._getRatio(referenceCoin, depositCoin, settleCoin);
@@ -244,8 +244,8 @@ class ShiftProcessor {
                 throw new Error('Failed to get exchange rate');
             }
 
-            amount = Number(amountInUsd) * Number(ratio.rate);
-            // console.log('Debug:', { amountInUsd, rate: ratio.rate, result: amount });
+            amount = Number(amountFiat) * Number(ratio.rate);
+            // console.log('Debug:', { amountFiat, rate: ratio.rate, result: amount });
         }
 
         return Number(amount).toFixed(8);
@@ -284,6 +284,8 @@ class ShiftProcessor {
                 ...(userIp && { "userIp": userIp })
 
             });
+
+
 
             // Request shift data
             let shiftData;
@@ -433,4 +435,6 @@ class ShiftProcessor {
     }
 
 }
+
+
 module.exports = ShiftProcessor;
