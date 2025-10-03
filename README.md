@@ -115,7 +115,7 @@ If you don't want use wallet you can load the module like this. But all wallets 
 ```
 const cryptoProcessor = require('./ShiftProcessor.js')
 const shiftGateway = new cryptoProcessor({
-  SIDESHIFT_CONFIG, // Minimal required setting
+  sideshiftConfig: SIDESHIFT_CONFIG // Minimal required setting
 });
 ```
 
