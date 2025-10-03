@@ -1,21 +1,23 @@
 # sideshift-API-payment-integration package
 
-This Node.js package enables cryptocurrency payments in your Node.js project by integrating with the [Sideshift API](https://sideshift.ai/) using the [sideshift-api-nodejs](https://github.com/ryo-ohki-code/sideshift-api-node) module, allowing you to integrate cryptocurrency payment processing in any Node.js project with just a few tweaks. It supports real-time payment processing, polling for transaction confirmations, 237+ cryptocurrencies and multi-currency support including USD, EUR, JPY, etc.
+This Node.js package enables cryptocurrency payments in your Node.js project by integrating with the [SideShift API](https://sideshift.ai/) using the [sideshift-api-node](https://github.com/ryo-ohki-code/sideshift-api-node) module, allowing you to integrate cryptocurrency payment processing in any Node.js project with just a few tweaks. It supports real-time payment processing, polling for transaction confirmations, 250+ cryptocurrencies and multi-currency support including USD, EUR, JPY, etc.
 
 
 ## Components
-- `cryptoProcessor`: Handles the creation and management of crypto payments via Sideshift API.
-- `PaymentPoller`: Polls the sideshift API for payment confirmation and triggers success/failure callbacks.
+- `cryptoProcessor`: Handles the creation and management of crypto payments via SideShift API.
+- `PaymentPoller`: Polls the SideShift API for payment confirmation and triggers success/failure callbacks.
 
 
 ## Installation 
 
 ### Package
-The package only requires the fs and sideshift API modules to work.
+The package only requires the fs and SideShift API modules to work.
 Use this file from the repo: [sideshiftAPI.js](https://github.com/ryo-ohki-code/sideshift-api-node/blob/main/sideshiftAPI.js)
 ```bash
+wget https://raw.githubusercontent.com/ryo-ohki-code/sideshift-api-node/main/sideshiftAPI.js
 npm install fs
 ```
+
 
 ### Demo server
 Simple sample settings of how to use this package on server and client sides.
@@ -32,12 +34,14 @@ SIDESHIFT_SECRET=Your_Sideshift_Secret
 WALLET_ADDRESS=0x...
 ```
 
+How to get your API credentials?
+Visit [Sideshift Account Page](https://sideshift.ai/account) and dind your SideShift ID and Secret (private key) in the dashboard.
+
 **Star the demo server**
 ```bash
 npm install https express pug fs dotenv express-rate-limit
 node demo_shop.js
 ```
-
 
 📝 Note: It will download and store the coin icon on the first start.
 
@@ -64,7 +68,7 @@ SHOP_SETTING.USD_REFERENCE_COIN = "USDT-bsc"; // Must be a coin-network from the
 ```
 
 ### Wallet Configuration
-Important: The current version requires two different wallets since the Sideshift API doesn't support same-coin-network shifts (e.g., BTC-bitcoin to BTC-bitcoin).
+Important: The current version requires two different wallets since the SideShift API doesn't support same-coin-network shifts (e.g., BTC-bitcoin to BTC-bitcoin).
 
 ```
 const MAIN_WALLET = {
@@ -101,20 +105,27 @@ const WALLETS = {
 ```
 const cryptoProcessor = require('./ShiftProcessor.js')
 const shiftGateway = new cryptoProcessor({
-  WALLETS,
-  MAIN_COIN,
-  SECONDARY_COIN,
-  SIDESHIFT_CONFIG,
-  SHOP_SETTING
+  wallets: WALLETS, // optional - needed to receive payment
+  sideshiftConfig: SIDESHIFT_CONFIG,
+  currencySetting: SHOP_SETTING // optional, default to USD if not set
 });
 ```
+
+If you don't want use wallet you can load the module like this. But all wallets related function will be unavailable:
+```
+const cryptoProcessor = require('./ShiftProcessor.js')
+const shiftGateway = new cryptoProcessor({
+  SIDESHIFT_CONFIG, // Minimal required setting
+});
+```
+
 
 ### Load the payment poller system
 ```
 const PaymentPoller = require('./CryptoPaymentPoller.js');
 const cryptoPoller = new PaymentPoller({
   shiftGateway,
-  intervalTimeout: 120000, // ms
+  intervalTimeout: 120000, // optinal default to 30000 ms
   resetCryptoPayment,
   confirmCryptoPayment
 });
@@ -125,7 +136,7 @@ const cryptoPoller = new PaymentPoller({
 See '/selection', '/create-quote' and '/create-payment' route on the demo server.
 
 ### Initialization
-To work the module needs access to the Sideshift coins list, it must be loaded at server start.
+To work the module needs access to the SideShift coins list, it must be loaded at server start.
 
 parameter
 ICON_PATH (save path for the icons)
@@ -139,7 +150,7 @@ await shiftProcessor.updateCoinsList(ICON_PATH)
 shiftProcessor.updateCoinsList(ICON_PATH).then((response) => {
     console.log('Initial coins list loaded');
 	availableCoins = response.availableCoins;
-    
+
     // Start server
     https.createServer(options, app).listen(PORT, () => {
         console.log(`HTTPS Server running at https://localhost:${PORT}/`);
@@ -156,25 +167,49 @@ shiftProcessor.updateCoinsList(ICON_PATH).then((response) => {
 });
 ```
 
-### getDestinationWallet - Test deposit coin to set settle address
-This function helps to set the right settle coin network and address for the shift, using your wallet configuration.
+## How to set a payment
+1. Get Destination Wallet: Use getDestinationWallet() to obtain the settle wallet details
+2. Convert Fiat Amount: Convert the fiat amount into the equivalent cryptocurrency deposit amount
+3. Create Quote and Shift: Generate a quote using the SideShift API, then create the fixed shift operation with settlement details
+
+**getDestinationWallet(depositCoin)**: Test deposit coin to set settle address
+The getDestinationWallet function is a wallet selection mechanism that determines which wallet should be used as the destination for settlement operations based on the input coin type and current wallet availability.
+
 ```
-const inputCoin = ['BNB-bsc', false]; // ['COIN-network', "Memo_here" || false]
-const outputChoise = shiftGateway.getDestinationWallet(inputCoin); 
+const depositCoin = ['BNB-bsc', false]; // ['COIN-network', false] or ['COIN-network', "Memo"]
+const settleWallet = shiftGateway.getDestinationWallet(depositCoin); 
 ```
 
+The function returns the appropriate wallet object based on:
+- If input coin matches MAIN_COIN: Returns SECONDARY_COIN
+- If input coin matches SECONDARY_COIN: Returns MAIN_COIN
 
-### Convert FIAT amount to cryptocurrency amount
+
+**getAmountToShift(amountToShift, depositCoin, settleCoin)**: Convert FIAT amount to cryptocurrency amount
+The getAmountToShift function is an asynchronous cryptocurrency conversion utility that calculates the appropriate cryptocurrency amount to shift based on a fiat deposit amount, considering exchange rates and network costs.
+
+Functionality:
+- Converts the input fiat amount to USD (from currencySetting.currency to USD)
+- Applies a 0.02% buffer to compensate for network fees and shift costs
+- Directly returns USD amount for stablecoins (USD-based coins)
+- For non-stablecoins, calculates the appropriate conversion ratio using _getRatio() method
+
 Parameters 
 - amount FIAT currency (e.g., 100.54)
 - from (e.g., BTC-bitcoin)
 - to (e.g., ETH-ethereum)
 ```
-let amount = await shiftGateway.getAmountToShift(amount, from, to);
+const amount = await shiftGateway.getAmountToShift(amount, from, to);
 ```
 
-### Get shift pair information
-Get all information about a pair, ratio, minimum and maximum deposit, ...
+return
+```
+1.23456789
+```
+
+
+**Get shift pair information**
+Get all information about a pair, rate, minimum and maximum deposit, ...
 
 Parameters 
 - from (e.g., BTC-bitcoin)
@@ -183,14 +218,32 @@ Parameters
 const getPairData = await shiftGateway.sideshift.getPair(from, to);
 ```
 
-### Create invoice shift 
-Parameters 
-- coin (e.g., BTC)
-- network (e.g., bitcoin)
-- amount cryptocurrency (e.g., 0.05)
-- userIp (e.g., 123.123.123.123)
+returns pair object from the SideShift API:
 ```
-const shift = await shiftGateway.createFixedShift(depositCoin, depositNetwork, amount, userIp);
+{
+  "min": "0.0.00010771",
+  "max": "1.43608988",
+  "rate": "17.298009817772",
+  "depositCoin": "BTC",
+  "settleCoin": "ETH",
+  "depositNetwork": "bitcoin",
+  "settleNetwork": "ethereum"
+}
+```
+
+
+**createFixedShift(depositCoin, depositNetwork, amountFiat, userIp = null)**: 
+The createFixedShift function is an asynchronous cryptocurrency shift creation utility that processes fiat deposits into cryptocurrency settlements through the SideShift API. It Handles all necessary step to set the shift.
+
+Parameters
+- depositCoin: The deposit coin symbol (e.g., 1INCH)
+- depositNetwork: The deposit network identifier (e.g., ethereum)
+- amountFiat: The FIAT amount to be payed (e.g., 124.0248)
+- userIp (optional): IP address for user tracking and security (e.g., 123.123.123.123)
+- externalId (optional): External identifier for tracking purposes
+
+```
+const shift = await shiftGateway.createFixedShift(depositCoin, depositNetwork, amountFiat, userIp);
 ```
 
 return
@@ -218,14 +271,44 @@ return
 ```
 
 
+### Coin Management
+
+**updateCoinsList(destination)**:
+The updateCoinsList function is an asynchronous utility that refreshes the system's coin database with the latest information from the SideShift API, including coin details, network information, and icon downloads.
+
+Parameter
+destination: The file path or destination where coin icons should be downloaded
+
+return
+```
+{ availableCoins: [availableCoins], lastCoinList: [lastCoinList] }
+```
+availableCoins: Complete list of available coin-network ([['COIN-network', false], ['COIN-network', "Memo"], ...])
+lastCoinList: Most recent coin list for comparison purposes
+
+
+**getAvailablecoins()**: Fetches full list of supported coins from SideShift.
+returns same as updateCoinsList.
+
+
+
 ### Helpers function:
-To sanitize string and number input
+
+**extractIPInfo(ipAddress)**:
+Parameters 
+- ipAddress (e.g., 123.123.123.123)
+
+The extractIPInfo function is a comprehensive IP address validator and parser that processes incoming IP addresses and returns structured information about their type and validity. It handles both IPv4 and IPv6 addresses, including IPv4-mapped IPv6 addresses (prefixed with ::ffff:)
+
+```
+shiftProcessor.extractIPInfo(req.ip)
+```
+
+
+**Sanitize input**
+To sanitize string and number use:
 ```
 shiftProcessor.sanitizeStringInput(inputHere)
 shiftProcessor.sanitizeNumberInput(inputHere)
 ```
 
-Express helper to extract IP address for optionnal shiftGateway.createFixedShift userIp input
-```
-shiftProcessor.extractIPInfo(req.ip)
-```
