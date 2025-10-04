@@ -253,30 +253,28 @@ class ShiftProcessor {
 
 
     // Call Sideshift module to get quote and create a fixed rate shift
-    async createFixedShift(coin_A, network_A, amount_FIAT, userIp = null) {
+    async createFixedShift(depositCoin, depositNetwork, amountFiat, userIp = null) {
         try {
-            if (!coin_A || !network_A || !amount_FIAT) {
+            if (!depositCoin || !depositNetwork || !amountFiat) {
                 throw new Error('Missing required parameters for createFixedShift');
             }
 
-            const depositCoinNetwork = `${coin_A}-${network_A}`;
+            const depositCoinNetwork = `${depositCoin}-${depositNetwork}`;
             const settleData = this.getDestinationWallet(depositCoinNetwork);
             const settleCoinNetwork = settleData.coin + "-" + settleData.network;
 
             let settleAmount;
 
             try {
-                settleAmount = await this.getAmountToShift(amount_FIAT, depositCoinNetwork, settleCoinNetwork);
+                settleAmount = await this.getAmountToShift(amountFiat, depositCoinNetwork, settleCoinNetwork);
             } catch (error) {
                 throw new Error(`Failed to calculate amount: ${error.message}`);
             }
 
-            const getPairData = await this.sideshift.getPair(depositCoinNetwork, settleCoinNetwork);
-
             // Request quote data
             let quoteData = await this.sideshift.requestQuote({
-                depositCoin: coin_A,
-                depositNetwork: network_A,
+                depositCoin: depositCoin,
+                depositNetwork: depositNetwork,
                 settleCoin: settleData.coin,
                 settleNetwork: settleData.network,
                 depositAmount: null,
@@ -284,8 +282,6 @@ class ShiftProcessor {
                 ...(userIp && { "userIp": userIp })
 
             });
-
-
 
             // Request shift data
             let shiftData;
@@ -316,6 +312,70 @@ class ShiftProcessor {
             throw error;
         }
     }
+
+
+
+    // Call Sideshift module to get quote and create a fixed rate shift
+    async createFixedShiftManual({depositCoin, depositNetwork, amountFiat, settleAddress, settleCoin, settleNetwork, settleMemo, userIp = null}) {
+        try {
+            if (!depositCoin || !depositNetwork || !amountFiat) {
+                throw new Error('Missing required parameters for createFixedShift');
+            }
+
+            const depositCoinNetwork = `${depositCoin}-${depositNetwork}`;
+            const settleCoinNetwork = `${settleCoin}-${settleNetwork}`;
+
+            let settleAmount;
+
+            try {
+                settleAmount = await this.getAmountToShift(amountFiat, depositCoinNetwork, settleCoinNetwork);
+            } catch (error) {
+                throw new Error(`Failed to calculate amount: ${error.message}`);
+            }
+
+
+            // Request quote data
+            let quoteData = await this.sideshift.requestQuote({
+                depositCoin: depositCoin,
+                depositNetwork: depositNetwork,
+                settleCoin: settleCoin,
+                settleNetwork: settleNetwork,
+                depositAmount: null,
+                settleAmount: Number(settleAmount),
+                ...(userIp && { "userIp": userIp })
+
+            });
+
+            // Request shift data
+            let shiftData;
+            if (!quoteData.error) {
+
+                shiftData = await this.sideshift.createFixedShift({
+                    settleAddress: settleAddress,
+                    quoteId: quoteData.id,
+                    ...(settleMemo && { "settleMemo": String(settleMemo) }),
+                    // ...(refundAddress && { refundAddress }),
+                    // ...(refundMemo && { refundMemo }),
+                    ...(userIp && { "userIp": userIp })
+                });
+            }
+
+            // Security check settleAmount, depositCoin, depositNetwork and settleAddress
+            if (Number(settleAmount) !== Number(shiftData.settleAmount)) throw new Error(`Wrong settleAmount: ${settleAmount} != ${shiftData.settleAmount}`);
+            if (settleCoin !== shiftData.settleCoin) throw new Error(`Wrong settleCoin: ${settleCoin} != ${shiftData.settleCoint}`);
+            if (settleNetwork !== shiftData.settleNetwork) throw new Error(`Wrong settleNetwork: ${settleNetwork} != ${shiftData.settleNetwork}`);
+            if (settleAddress !== shiftData.settleAddress) throw new Error(`Wrong settleAddress: ${settleAddress} != ${shiftData.settleAddress}`);
+
+            return shiftData;
+        } catch (err) {
+            const error = new Error(err.message || 'Failed to create fixed shift')
+            error.original = err;
+            if (this.verbose) console.error('createFixedShift failed:', error);
+            throw error;
+        }
+    }
+
+
 
 
       // return array of available USD coins
