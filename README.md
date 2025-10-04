@@ -50,12 +50,12 @@ node demo_shop.js
 
 ### API Credentials
 ```
-const SIDESHIFT_ID = "Your_sideshift_ID"; 
-const SIDESHIFT_SECRET = "Your_shideshift_secret";
+const SIDESHIFT_ID = process.env.SIDESHIFT_ID; // "Your_sideshift_ID"; 
+const SIDESHIFT_SECRET = process.env.SIDESHIFT_SECRET; //"Your_shideshift_secret";
 const SIDESHIFT_CONFIG = {
 	secret: SIDESHIFT_SECRET,
 	id: SIDESHIFT_ID,
-	commissionRate: "0.5",
+	commissionRate: "0.5", // from 0 to 2 %
 	verbose: true
 }
 ```
@@ -74,14 +74,14 @@ Important: The current version requires two different wallets since the SideShif
 const MAIN_WALLET = {
 	coin: "USDT",
 	network: "bsc",
-	address: "Your wallet address",
+	address: process.env.WALLET_ADDRESS, // "Your wallet address",
 	isMemo: [false, ""] // Set to [false, ""] or if your wallet need a Memo set to [true, "YourMemoHere"]
 }
 
 const SECONDARY_WALLET = {
 	coin: "BNB",
 	network: "bsc",
-	address: "Your wallet address",
+	address: process.env.WALLET_ADDRESS, // "Your wallet address",
 	isMemo: [false, ""]
 }
 
