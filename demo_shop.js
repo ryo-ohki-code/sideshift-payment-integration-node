@@ -199,8 +199,8 @@ app.post("/create-quote", paymentLimiter, async function(req,res) {
 
 		const orderId = shiftProcessor.sanitizeStringInput(req.body.shopOrderID);
 
-        if(!req.body.pay_with) throw new Error("Missing input coin");
-		const payWith = JSON.parse(req.body.pay_with);
+        if(!req.body.payWith) throw new Error("Missing input coin");
+		const payWith = JSON.parse(req.body.payWith);
         if (!payWith) throw new Error("Can't parse input coin");
 		const payWithCoin = shiftProcessor.sanitizeStringInput(payWith[0]);
         if (!payWithCoin) throw new Error("Missing input coin");
