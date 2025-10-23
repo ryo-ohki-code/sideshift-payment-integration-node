@@ -1,0 +1,22 @@
+.rotate-animation {
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
+}
+
+.flip-animation {
+  animation: flip 9s ease-in-out infinite;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+/*  animation: flip 9s cubic-bezier(0.42, 0, 0.58, 1) infinite;*/
+}
+@keyframes flip {
+  0% { transform: scaleX(1); }
+  25% { transform: scaleX(-1); }/* Flip */
+  50% { transform: scaleX(1); }
+  75% { transform: scaleX(-1); } 
+  100% { transform: scaleX(1); }/* Return to normal */
+}
