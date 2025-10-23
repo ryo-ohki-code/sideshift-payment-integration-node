@@ -4,7 +4,7 @@ This Node.js package enables cryptocurrency payments in your Node.js project by 
 
 This package handle both integration method 'custom integration' and SideShift Checkout integration.
 
-By nature we recommends to us the Checkout integration as it's permit payment from the same coin without needs to set a secondary wallet. 
+By nature we recommends to you the Checkout integration as it's permit payment from the same coin without needs to set a secondary wallet. 
 
 
 ## Components
@@ -218,10 +218,6 @@ const checkout = await shiftProcessor.requestCheckout({
     settleAmount: Number(settleAmount),
     successUrl: `${BASE_URL}/success-checkout/${orderId}&secret=${secretHash}`,
     cancelUrl: `${BASE_URL}/cancel-checkout/${orderId}&secret=${secretHash}`,
-<<<<<<< HEAD
-=======
-    externalId: orderId, // Optional
->>>>>>> 4099f8a05e43326c09d64ff6699888a6230271d7
     userIp: shiftProcessor.helper.extractIPInfo(req.ip).address,
 })
 res.redirect(checkout.link);
@@ -241,22 +237,14 @@ Refer to /success-checkout and /cancel-checkout routes.
 Simply use getSettlementData() to get all necessary data:
 
 **getSettlementData(amountFiat, depositCoinNetwork)**:
-<<<<<<< HEAD
 The getSettlementData function is an asynchronous settlement calculator that determines the appropriate settlement amount, address, and exchange rate for cryptocurrency shift operations based on fiat deposit amounts and deposit coin-network.
-=======
-The getSettleAmountSettleAddressAndRate function is an asynchronous settlement calculator that determines the appropriate settlement amount, address, and exchange rate for cryptocurrency shift operations based on fiat deposit amounts and deposit coin-network.
->>>>>>> 4099f8a05e43326c09d64ff6699888a6230271d7
 
 Parameters 
 - totalFiat (e.g., 100.05)
 - depositCoinNetwork (e.g., ETH-ethereum)
 
 ```
-<<<<<<< HEAD
 const data = await shiftProcessor.getSettlementData(Number(totalFiat), depositCoinNetwork); 
-=======
-const data = await shiftProcessor.getDepositAmountAndSettleAddressAndRatio(Number(totalFiat), depositCoinNetwork); 
->>>>>>> 4099f8a05e43326c09d64ff6699888a6230271d7
 ```
 
 Return
@@ -403,13 +391,7 @@ Refer to the handleCryptoShift middleware and routes: /payment-status, /success/
 Use the resetCryptoPayment and confirmCryptoPayment functions to handle the polling system response.
 
 
-<<<<<<< HEAD
 ## Detailed Shift function:
-=======
-## Detailed Features
-
-### Shift function:
->>>>>>> 4099f8a05e43326c09d64ff6699888a6230271d7
 
 **requestQuoteAndShift()**
 ```
@@ -478,11 +460,7 @@ shiftProcessor.sideshift['endpoint_name']
 ```
 
 
-<<<<<<< HEAD
 ## Coin helpers function
-=======
-### Coin helpers function
->>>>>>> 4099f8a05e43326c09d64ff6699888a6230271d7
 
 **updateCoinsList(destination)**:
 The updateCoinsList function is an asynchronous utility that refreshes the system's coin database with the latest information from the SideShift API, including coin details, network information, and icon downloads.
@@ -584,11 +562,7 @@ Convert an USD amount to a settle coin-network cryptocurrency amount
 
 
 
-<<<<<<< HEAD
 ## Other helpers function:
-=======
-### Other helpers function:
->>>>>>> 4099f8a05e43326c09d64ff6699888a6230271d7
  
 **getCoinNetwork(coin, network)** 
 return "coin-network" string
@@ -652,17 +626,10 @@ Return an object with supportedNetworks, mainnetCoins and tokenByChain
 
 
 
-<<<<<<< HEAD
 ## Explorer Links Generation
-=======
-### Explorer Links Generation
->>>>>>> 4099f8a05e43326c09d64ff6699888a6230271d7
 
 **getNetworkExplorer(network)**
 Maps blockchain network names (e.g., "ethereum") to standardized formats.
 Generates explorer URLs for supported networks via https://3xpl.com/{network}/address/.
 
-<<<<<<< HEAD
 
-=======
->>>>>>> 4099f8a05e43326c09d64ff6699888a6230271d7
