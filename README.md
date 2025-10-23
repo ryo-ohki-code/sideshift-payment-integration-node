@@ -1,6 +1,4 @@
-<<<<<<< HEAD
 # sideshift-API-payment-wrapper Node.js
->>>>>>> 4099f8a05e43326c09d64ff6699888a6230271d7
 
 This Node.js package enables cryptocurrency payments in your Node.js project by integrating with the [SideShift API](https://sideshift.ai/) using the [sideshift-api-node](https://github.com/ryo-ohki-code/sideshift-api-node) module, allowing you to integrate cryptocurrency payment processing in any Node.js project with just a few tweaks. It supports real-time payment processing, polling for transaction confirmations, 250+ cryptocurrencies and multi-currency support including USD, EUR, JPY, etc.
 
