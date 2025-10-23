@@ -12,15 +12,15 @@ html
 		meta( name="robots" content="noindex")
 		meta(name="viewport" content="width=device-width, initial-scale=1.0")
 
-		link(rel='stylesheet' href='/payment-processor.css')
-		link(rel='stylesheet' href='/animation.css')
+		link(rel='stylesheet' href='/css/payment-processor.css')
+		link(rel='stylesheet' href='/css/animation.css')
 
 
 	body 
 		div
 			//- Preview payment page
 			if(ratio)
-
+				//- For demo virtual invoice
 				if(!invoice)
 					h2 Error - No invoice Data
 
@@ -32,6 +32,16 @@ html
 				else
 					-totalCrypto = Number(invoice.cryptoTotal / Number(ratio.rate)).toFixed(8)
 					-invoiceTotal = Number(invoice.total).toLocaleString(CURRENCY_SETTING.locale,{style:'currency', currency: CURRENCY_SETTING.currency})
+					
+					//- Test shift min/max amount - useless done server side
+					//- if(totalCrypto < Number(ratio.min) || totalCrypto > Number(ratio.max))
+					//- 	h2 Payment error
+					//- 	p Total: #{invoiceTotal}
+					//- 	if(totalCrypto < Number(ratio.min))
+					//- 		p Cannot pay #{totalCrypto} #{ratio.depositCoin}, minimum required is #{ratio.min} #{ratio.depositCoin}
+					//- 	if(totalCrypto > Number(ratio.max))
+					//- 		p Cannot pay #{totalCrypto} #{ratio.depositCoin}, maximun required is #{ratio.max} #{ratio.depositCoin}
+					//- else 
 
 					form(method="post" action="/create-payment").form-checkout
 						h1 Order: #{invoice.id}
@@ -72,7 +82,7 @@ html
 
 
 
-			//- Shift payment page 
+			//- Shift payment page design 1
 			if(shift)
 				br
 				div.form-checkout.main-wrapper(style="max-width:1200px;")
@@ -125,19 +135,29 @@ html
 
 							//- if(shift.status != "expired")
 							div#SEND_AMOUNT.table-container(style="margin-top:20px;")
-								table
-									if(shift.status == "waiting")
-										th.send-amount Send exactly
-									else
-										th.send-amount Amount
-									td #{shift.depositAmount}
-										//- Copy to clipboard
-										button(style="float:right;" onclick="copyToClipboard('COPY_AMOUNT')")#COPY_AMOUNT.copy-btn 
-											img(src="/copy.png" width="20px" style="")
-											span  Copy
+								if(shift.type == "fixed")
+									table
+										if(shift.status == "waiting")
+											th.send-amount Send exactly
+										else
+											th.send-amount Amount
+										td #{shift.depositAmount}
+											//- Copy to clipboard
+											button(style="float:right;" onclick="copyToClipboard('COPY_AMOUNT')")#COPY_AMOUNT.copy-btn 
+												img(src="/img/copy.png" width="20px" style="")
+												span  Copy
 
-									tr
-								
+										tr
+
+								if(shift.type == "variable")
+									table 
+										th.send-amount  Send Min
+										td #{shift.depositMin}
+										tr
+										th.send-amount  Send Max
+										td #{shift.depositMax}
+										tr
+
 
 
 
@@ -154,14 +174,14 @@ html
 													
 													//- Explorer link
 													a(href=depositLink target="_blank").explorer-link
-														img(src="/eye.png" width="30px")
+														img(src="/img/eye.png" width="30px")
 													
 													//- Address
 													span #{shift.depositAddress} 
 
 													//- Copy to clipboard
 													button(onclick="copyToClipboard('COPY_ADDRESS')")#COPY_ADDRESS.copy-btn 
-														img(src="/copy.png" width="20px")
+														img(src="/img/copy.png" width="20px")
 														span  Copy
 										tr 
 
@@ -171,7 +191,7 @@ html
 											th Wallet Memo
 											td #{shift.depositMemo}
 												button(onclick="copyToClipboard('COPY_MEMO')")#COPY_MEMO.copy-btn
-													img(src="/copy.png" width="20px" style="margin-left:8px;vertical-align: middle;")
+													img(src="/img/copy.png" width="20px" style="margin-left:8px;vertical-align: middle;")
 													span  Copy
 											tr
 
@@ -204,16 +224,136 @@ html
 					div.order-info
 						p.info-left Creation Date: #{(new Date(shift.createdAt)).toLocaleString('en-EN')}
 						a(href="/cancel-shift/"+shift.id+"/"+invoice.id)
-							button.btn.cancelbtn Cancel Payment
+							button.btn.cancelbtn( style="width:220px; padding: 12px 16px") Cancel Payment
 
 						p.info-right Payment ID: #{shift.id}
 					
 
+
+
+	
+				
 				
 				br
 				br
 				br
 				br
+
+
+
+
+
+				//- //- Shift payment page design 1
+
+				//- div.payment-contenair
+				//- 	if(!invoice)
+				//- 		p Invoice error
+
+				//- 	if(shift.error)
+				//- 		h3 API error
+				//- 		p #{shift.error.message}
+				//- 	else
+				//- 		h1 Paying order: #{invoice.id}
+
+				//- 		table
+				//- 			tr
+				//- 				th Payment ID
+				//- 				td
+				//- 					p #{shift.id}
+				//- 			tr
+				//- 				th Deposit coin
+				//- 				td
+				//- 					p
+				//- 						b #{shift.depositCoin} (#{shift.depositNetwork})
+				//- 			tr
+				//- 				th Creation Date
+				//- 				td
+				//- 					p #{(new Date(shift.createdAt)).toLocaleString('en-EN')}
+				//- 			tr
+				//- 				th Expiration Date
+				//- 				td
+				//- 					//- p#EXPIREAT #{(new Date(shift.expiresAt)).toLocaleString('en-EN')}
+
+
+				//- 		div#PAYMENT_STATUS
+				//- 			if(shift.status == "waiting")
+				//- 				h2.waiting Waiting for payment
+
+				//- 			else if(shift.status == "pending")
+				//- 				h2.pending Payment detected, waiting confirmation
+
+				//- 			else if(shift.status == "processing")
+				//- 				h2.processing Deposit confirmed
+
+				//- 			else if(shift.status == "settling")
+				//- 				h2.settling Payment near 100% completed
+							
+				//- 			else if(shift.status == "settled")
+				//- 				h2.validated Payment completed !
+				//- 				//- REDIRECT TO SUCCESS PAGE, done from server side
+							
+				//- 			else if(shift.status == "expired")
+				//- 				h2.expired Payment address expired !
+				//- 				//- REDIRECT TO CANCEL PAGE
+								
+				//- 			else
+				//- 				h2 Invalid status
+
+
+				//- 		if(shift.status != "expired")
+				//- 			img(src="/icons/"+shift.depositCoin+"-"+shift.depositNetwork+".svg" width="100px" height="100px" class="flip-animation")
+				//- 			h2 #{shift.depositCoin} (#{shift.depositNetwork})
+							
+
+				//- 		if(shift.status != "expired")
+
+
+
+				//- 			if(shift.status != "expired")
+				//- 				table
+				//- 					tr
+				//- 						if(shift.status == "waiting")
+				//- 							th Send
+				//- 						else
+				//- 							th Amount
+				//- 						td #{shift.depositAmount}
+				//- 					tr
+				//- 						if(shift.status == "waiting")
+				//- 							th To
+				//- 						else
+				//- 							th Destination Wallet
+				//- 						if(!depositLink)
+				//- 							td #{shift.depositAddress}
+				//- 						else
+				//- 							td(style="border-bottom: 0px solid black; ") 
+				//- 								a(href=depositLink target="_blank") #{shift.depositAddress}
+				//- 					tr 
+				//- 						//- QR code
+				//- 						td(colspan="2")
+				//- 							div(style="text-align:center;padding:0; margin:0;")
+				//- 								.qr-container
+				//- 									canvas#qrcode
+				//- 								-averageShiftMinutes = Math.floor(shift.averageShiftSeconds / 60);
+				//- 								if(averageShiftMinutes > 0)
+				//- 									p Average shift processing delay: #{averageShiftMinutes} minute(s) once pending
+				//- 								else 
+				//- 									p Average shift processing delay: less than 1 minute once pending
+
+				//- 					//- Memo
+				//- 					if(shift.depositMemo)
+				//- 						tr
+				//- 							th Wallet Memo
+				//- 							td #{shift.depositMemo}
+				
+
+				//- 		br
+				//- 		a(href="/cancel-shift/"+shift.id+"/"+invoice.id)
+				//- 			button.btn.cancelbtn Cancel Payment
+
+				//- 		br
+				//- 		br
+
+
 
 
 
@@ -327,6 +467,36 @@ if(shift)
 							}
 						}
 
+						//- Update send amount container visibility based on status
+						//- if (sendAmountContainer) {
+						//- 	if (data.status !== "waiting") {
+						//- 		sendAmountContainer.style.display = 'none';
+						//- 	} else {
+						//- 		sendAmountContainer.style.display = 'block';
+						//- 	}
+						//- }
+
+						//- Update SEND_ADDRESS visibility based on status
+						//- if (sendAddressElement) {
+						//- 	if (data.status !== "waiting") {
+						//- 		sendAddressElement.style.display = 'none';
+						//- 	} else {
+						//- 		sendAddressElement.style.display = 'block';
+						//- 	}
+						//- }
+
+						//- if (qrCodeElement) {
+						//- 	if (data.status !== "waiting") {
+						//- 		qrCodeElement.style.display = 'none';
+						//- 		qrCodeDivElement.classList.remove('left-section');
+						//- 		iconContainer.classList.remove('right-section');
+						//- 	} else {
+						//- 		qrCodeElement.style.display = 'block';
+						//- 		qrCodeDivElement.classList.add('left-section');
+						//- 		iconContainer.add('right-section');
+						//- 	}
+						//- }
+
 						//- Stop polling when payment is completed or expired and redirect user by reloading the page.
 						if (data.status === "settled" || data.status === "expired") {
 							clearInterval(pollInterval);
@@ -374,6 +544,15 @@ if(shift)
 				buttonText = "Copy";
 			}
 			if(buttonId === "COPY_ADDRESS") {
+				//- let processedValue = shiftData.depositAddress;
+				//- if (processedValue.includes(':')) {
+				//- 	const parts = processedValue.split(':');
+				//- 	if (parts.length > 1) {
+				//- 		processedValue = parts[1];
+				//- 	}
+				//- }
+
+				//- value = processedValue;
 				value = shiftData.depositAddress;
 				buttonText = "Copy";
 			}
@@ -381,7 +560,7 @@ if(shift)
 				value = shiftData.depositMemo;
 				buttonText = "Copy";
 			}
-			const buttonHtml = '<img src="/copy.png" width="20px"></img><span>Copy</span>';
+			const buttonHtml = '<img src="/img/copy.png" width="20px"></img><span>Copy</span>';
 
 			if (!value) {
 				//- console.warn('No value to copy for button:', buttonId);

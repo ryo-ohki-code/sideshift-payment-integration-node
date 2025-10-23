@@ -2,7 +2,7 @@ const fs = require('fs');
 const Helpers = require('./helpers.js')
 
 class ShiftProcessor {
-    constructor({ wallets = {}, sideshiftConfig, currencySetting = { currency: "USD", USD_REFERENCE_COIN: "USDT-bsc" } }) {
+    constructor({ wallets = {}, sideshiftConfig, currencySetting = { currency: "USD", USD_REFERENCE_COIN: "USDT-bsc", SHIF_LIMIT_USD: 20000 } }) {
         // Initialize Sideshift API
         try {
             const SideshiftAPI = require(sideshiftConfig.path);
@@ -26,7 +26,7 @@ class ShiftProcessor {
             throw err;
         }
 
-        // set variables
+        // set variables, shop locale data, coins list and wallets
         this.availableCoins = null;
         this.rawCoinList = null;
         this.lastCoinList = [];
@@ -71,6 +71,8 @@ class ShiftProcessor {
 
         this.rawCoinList.forEach(element => {
             const networks = element.networks.length ? element.networks : [element.mainnet];
+            // const hasNetworksWithMemo = element.networksWithMemo && element.networksWithMemo.length > 0;
+            // const isCoinAvailable = element.depositOffline === false;
 
             networks.forEach(net => {
                 if (`${element.coin}-${net}` === this.MAIN_COIN) {
@@ -84,6 +86,8 @@ class ShiftProcessor {
 
         return [is_MAIN_COIN_available, is_SECONDARY_COIN_available];
     }
+
+
 
     // Test witch wallet should be used
     getSettleWallet(inputCoin) {
@@ -100,6 +104,10 @@ class ShiftProcessor {
         return this.WALLETS[this.MAIN_COIN];
     }
 
+
+
+
+
     // Get exchange ratio betwwen 2 coins in different condition
     async _getRatio(referenceCoin, depositCoin, settleCoin) {
         if (!referenceCoin || !depositCoin || !settleCoin) {
@@ -107,6 +115,23 @@ class ShiftProcessor {
         }
 
         const isDepositUsd = this.helper.isUsdStableCoin(depositCoin);
+        // const isSettleUsd = this.helper.isUsdStableCoin(settleCoin);
+
+        // if referenceCoin is equal to settleCoin then is an alternative coin to get ratio
+        // if (isSettleUsd && referenceCoin === settleCoin) {
+        //     const alternativeCoin = this.helper.getAlternativeUSDCoin(settleCoin);
+        //     // if (!alternativeCoin) {
+        //     //     throw new Error(`Cannot shift between the same coin network pair: ${depositCoin} ${settleCoin}`);
+        //     // }
+        //     return await this.sideshift.getPair(alternativeCoin, settleCoin);
+
+        //     //if depositCoin and settleCoin === USD coin then ratio should be 1, using API gives 0.9845
+        // } else 
+        // if (isDepositUsd && isSettleUsd) {
+        //     return { rate: 1 };
+
+        //     //if depositCoin is USD then use it, else use reference coin.
+        // } else 
 
         if (isDepositUsd && depositCoin !== settleCoin) {
             return await this.sideshift.getPair(depositCoin, settleCoin);
@@ -122,7 +147,7 @@ class ShiftProcessor {
     }
 
     // Convert FIAT amount into Cryptocurrency amout
-    async getAmountToShift(amountToShift, depositCoin, settleCoin) {
+    async calculateCryptoFromFiat(amountToShift, depositCoinNetwork, settleCoinNetwork) {
         if (!amountToShift || isNaN(amountToShift)) {
             throw new Error(`Invalid amount to shift: ${amountToShift}`);
         }
@@ -134,25 +159,31 @@ class ShiftProcessor {
             throw new Error('Amount to shift must be greater than zero');
         }
 
+        if (parsedAmount > this.CURRENCY_SETTING.SHIF_LIMIT_USD) {
+            throw new Error('Amount to shift must be lower than 20000 USD');
+        }
+
         const referenceCoin = this.CURRENCY_SETTING.USD_REFERENCE_COIN;
-        if (!referenceCoin || !depositCoin || !settleCoin) {
-            throw new Error('Missing required parameters for getAmountToShift');
+        if (!referenceCoin || !depositCoinNetwork || !settleCoinNetwork) {
+            throw new Error('Missing required parameters for calculateCryptoFromFiat');
         }
 
         let amount;
 
         // Convert FIAT to USD
-        const fiatExchangeRate = await this.helper.getUsdFiatConvertionRate(this.CURRENCY_SETTING.currency);
+        const fiatExchangeRate = await this.helper.getCurrencyConvertionRate(this.CURRENCY_SETTING.currency);
+        // let amountFiat = Number(amountToShift) * fiatExchangeRate;
+        // amountFiat = amountFiat * 1.0002;
 
         let amountFiat = parsedAmount * fiatExchangeRate;
         amountFiat = this._safeMultiply(amountFiat, 1.0002, this.DECIMAL); // total + 0.02% to compensate shift and network cost.
 
         // Test is settleCoin is a stable coin
-        if (this.helper.isUsdStableCoin(settleCoin)) {
+        if (this.helper.isUsdStableCoin(settleCoinNetwork)) {
             amount = amountFiat;
         } else {
             // If not stable coin then calculate appropriate ratio for the shift
-            const ratio = await this._getRatio(referenceCoin, depositCoin, settleCoin);
+            const ratio = await this._getRatio(referenceCoin, depositCoinNetwork, settleCoinNetwork);
 
             if (!ratio || !ratio.rate) {
                 throw new Error('Failed to get exchange rate');
@@ -166,12 +197,14 @@ class ShiftProcessor {
     }
 
     // Convert an USD amount to a settle coin-network cryptocurrency amount
-    async usdToSettleCoin(amountFiat, settleCoin, settleNetwork) {
-        if (!amountFiat || isNaN(amountFiat)) {
+    async usdToSettleAmount(amountFiat, settleCoin, settleNetwork) {
+        if (!amountFiat || isNaN(Number(amountFiat))) {
             throw new Error(`Invalid fiat amount: ${amountFiat}`);
         }
+
         const settleCoinNetwork = this.helper.getCoinNetwork(settleCoin, settleNetwork);
-        const settleAmount = this.getAmountToShift(amountFiat, this.CURRENCY_SETTING.USD_REFERENCE_COIN, settleCoinNetwork);
+        const settleAmount = this.calculateCryptoFromFiat(amountFiat, this.CURRENCY_SETTING.USD_REFERENCE_COIN, settleCoinNetwork);
+
         return settleAmount;
     }
 
@@ -187,7 +220,7 @@ class ShiftProcessor {
 
         let settleAmount;
         try {
-            settleAmount = await this.getAmountToShift(amountFiat, depositCoinNetwork, settleCoinNetwork);
+            settleAmount = await this.calculateCryptoFromFiat(amountFiat, depositCoinNetwork, settleCoinNetwork);
         } catch (error) {
             throw new Error(`Failed to calculate amount: ${error.message}`);
         }
@@ -201,6 +234,32 @@ class ShiftProcessor {
     // Test if amount is min < amount < max and return pair data
     async testMinMaxDeposit(depositCoinNetwork, settleCoinNetwork, settleAmount) {
         const getPairData = await this.sideshift.getPair(depositCoinNetwork, settleCoinNetwork);
+
+        // if(depositCoinNetwork === settleCoinNetwork){
+        //     // check validity for alternative coin
+        //     if (!this.helper.isCoinValid(this.ALTERNATIVE.COIN_NETWORK)) throw new Error('testMinMaxDeposit: Invalid depositCoin');
+        //     const [depositCoin, depositNetwork] = depositCoinNetwork.split('-');
+        //     const [settleCoin, settleNetwork] = settleCoinNetwork.split('-');
+            
+        //     const getPairDataTemp = await this.sideshift.getPair(settleCoinNetwork, this.ALTERNATIVE.COIN_NETWORK);
+        //     // const getPairData_2 = await this.sideshift.getPair(this.ALTERNATIVE.COIN_NETWORK, settleCoinNetwork);
+        //     // console.log(getPairData_2)
+
+        //     getPairData = {
+        //         min: getPairDataTemp.min,
+        //         max: getPairDataTemp.max,
+        //         rate: '0.998',
+        //         depositCoin: depositCoin,
+        //         settleCoin: settleCoin,
+        //         depositNetwork: depositNetwork,
+        //         settleNetwork: settleNetwork
+        //     };
+        //     console.log(getPairData)
+
+        //     // need deposit valut from an alternative coin
+        // } else{
+        //     getPairData = await this.sideshift.getPair(depositCoinNetwork, settleCoinNetwork);
+        // }
 
         const calculatedDepositAmount = Number(settleAmount / Number(getPairData.rate));
 
@@ -227,7 +286,7 @@ class ShiftProcessor {
         // Test if deposit and settle are online
         const isOnline = this.helper.isSettleOnline(depositCoin, depositNetwork, settleCoin, settleNetwork);
         if (!isOnline.isShiftOnline) {
-            throw new Error(`requestQuoteAndShift: Forbiden shift. Deposit Offline: ${isOnline.isDepositOffline}, Settle Offline: ${isOnline.isSettleOffline}`);
+            throw new Error(`isShiftAvailable: Forbiden shift. Deposit Offline: ${isOnline.isDepositOffline}, Settle Offline: ${isOnline.isSettleOffline}`);
         }
 
         // Test Min/Max deposit amount and get rate
@@ -240,12 +299,14 @@ class ShiftProcessor {
         return getPairData;
     }
 
+
     // Validate required input for createCryptocurrencyPayment createFixedShiftFromUsd createVariableShift payWithSameCoin
     validateRequiredInputs(depositCoin, depositNetwork, amountFiat = null) {
         this.helper.validateString(depositCoin);
         this.helper.validateString(depositNetwork);
         if (amountFiat) this.helper.validateNumber(amountFiat);
     }
+
 
     // Security check settleAmount, depositCoin, depositNetwork and settleAddress
     _securityValidation({settleCoin, settleNetwork, settleAddress, settleAmount = null, shift}){
@@ -264,6 +325,7 @@ class ShiftProcessor {
     }
 
 
+
     // Shift function
 
     // Chechout function, simpliest way: SideShift will process everyting on https://pay.sideshift.ai/checkout/${checkoutData.id} page
@@ -278,9 +340,10 @@ class ShiftProcessor {
         externalId = null,
         userIp = null,
     }) {
-        if (!settleCoin || !settleNetwork || !settleAddress || !settleAmount) {
+        if (!settleCoin || !settleNetwork || !settleAddress || !settleAmount || !successUrl || !cancelUrl) {
             throw new Error('Missing required parameters for requestCheckout');
         }
+
         // Request chechout data
         let checkoutData;
         try {
@@ -303,6 +366,7 @@ class ShiftProcessor {
 
         return checkoutData;
     }
+
 
     // Create variable shift
     async createVariableShift({ depositCoin, depositNetwork, refundAddress = null, refundMemo = null, userIp = null, externalId = null }) {
@@ -336,6 +400,9 @@ class ShiftProcessor {
 
             // Security check settleAmount, depositCoin, depositNetwork and settleAddress
             this._securityValidation({settleCoin: data.settleData.coin, settleNetwork: data.settleData.network, settleAddress: data.settleData.address, shift: shiftData});
+            // if (data.settleData.coin.toLowerCase() !== shiftData.settleCoin.toLowerCase()) throw new Error(`Wrong settleCoin: ${data.settleData.coin} != ${shiftData.settleCoint}`);
+            // if (data.settleData.network.toLowerCase() !== shiftData.settleNetwork.toLowerCase()) throw new Error(`Wrong settleNetwork: ${data.settleData.network} != ${shiftData.settleNetwork}`);
+            // if (data.settleData.address.toLowerCase() !== shiftData.settleAddress.toLowerCase()) throw new Error(`Wrong settleAddress: ${data.settleData.address} != ${shiftData.settleAddress}`);
 
             return shiftData;
         } catch (err) {
@@ -345,6 +412,7 @@ class ShiftProcessor {
             throw error;
         }
     }
+
 
     // Create a fixed shift in 1 step
     async requestQuoteAndShift({
@@ -397,7 +465,7 @@ class ShiftProcessor {
                 ...(userIp && { "userIp": userIp })
             });
         } catch (error) {
-            throw new Error(`requestQuoteAndShift: Error creating Quote: ${depositCoin} (${depositNetwork}) to ${settleAmount} ${settleCoin} (${settleNetwork})`, error)
+            throw new Error(`requestQuoteAndShift: Error creating Quote: ${depositCoin} (${depositNetwork}) to ${settleAmount} ${settleCoin} (${settleNetwork})\n${error.message}`)
         }
 
         // Request shift data
@@ -413,11 +481,13 @@ class ShiftProcessor {
                 ...(externalId && { "externalId": externalId })
             });
         } catch (error) {
-            throw new Error(`requestQuoteAndShift: Error creating Shift from quote ${quoteData.id}: ${depositCoin} (${depositNetwork}) to ${settleAmount} ${settleCoin} (${settleNetwork})`, error)
+            throw new Error(`requestQuoteAndShift: Error creating Shift from quote ${quoteData.id}: ${depositCoin} (${depositNetwork}) to ${settleAmount} ${settleCoin} (${settleNetwork})\n${error.message}`)
         }
 
         return shiftData;
     }
+
+
 
     // Create a fixed rate shift using an USD/fiat amount - Using config wallet setting
     async createCryptocurrencyPayment({ depositCoin, depositNetwork, amountFiat, refundAddress = null, refundMemo = null, userIp = null, externalId = null }) {
@@ -427,7 +497,30 @@ class ShiftProcessor {
             if (!depositCoin || !depositNetwork || !amountFiat) {
                 throw new Error('Missing required parameters for createCryptocurrencyPayment');
             }
-           
+
+            // let shiftData;
+            // if(depositCoin === myCoin && depositNetwork === myNetwork){
+            //     // Verify if alternative coin is available
+            //     const isAlternativeOnline = this.helper.isSettleOnline(this.ALTERNATIVE.COIN, this.ALTERNATIVE.NETWORK, myCoin, myNetwork);
+            //     if (!isAlternativeOnline.isShiftOnline) {
+            //         throw new Error(`createCryptocurrencyPayment: Forbiden shift. Deposit Offline: ${isAlternativeOnline.isDepositOffline}, Settle Offline: ${isAlternativeOnline.isSettleOffline}`);
+            //     }
+            //     console.log(`\n\n\n\n\n"pay using same coin"\n\n\n\n\n\n`)
+            //     // Create shift using payWithSameCoinFromUsd function
+            //     shiftData = await this.payWithSameCoinFromUsd({
+            //         depositCoin,
+            //         depositNetwork,
+            //         amountFiat,
+            //         settleCoin: myCoin,
+            //         settleNetwork: myNetwork,
+            //         settleAddress: this.WALLETS[this.MAIN_COIN].address,
+            //         ...(this.WALLETS[this.MAIN_COIN].isMemo[0] && { "settleMemo": String(this.MAIN_COIN.isMemo[1]) }),
+            //         ...(refundAddress && { refundAddress }),
+            //         ...(refundMemo && { refundMemo }),
+            //         ...(userIp && { "userIp": userIp }),
+            //     });
+            // } else {
+            
             const depositCoinNetwork = this.helper.getCoinNetwork(depositCoin, depositNetwork);
             const data = await this.getSettlementData(amountFiat, depositCoinNetwork);
 
@@ -445,6 +538,7 @@ class ShiftProcessor {
                 ...(userIp && { "userIp": userIp })
             });
 
+
             return shiftData;
         } catch (err) {
             const error = new Error(err.message || 'Failed to create fixed shift')
@@ -453,6 +547,7 @@ class ShiftProcessor {
             throw error;
         }
     }
+
 
     // Create a fixed rate shift using an USD/fiat amount - Manual wallet setting
     async createFixedShiftFromUsd({
@@ -481,7 +576,7 @@ class ShiftProcessor {
             // convert USD/fiat to cryptocurrency amount
             let settleAmount;
             try {
-                settleAmount = await this.getAmountToShift(amountFiat, depositCoinNetwork, settleCoinNetwork);
+                settleAmount = await this.calculateCryptoFromFiat(amountFiat, depositCoinNetwork, settleCoinNetwork);
             } catch (error) {
                 throw new Error(`Failed to calculate amount: ${error.message}`);
             }
@@ -504,6 +599,14 @@ class ShiftProcessor {
 
             // Security check settleAmount, depositCoin, depositNetwork and settleAddress
             this._securityValidation({settleCoin, settleNetwork, settleAddress, settleAmount, shift: shiftData});
+            // const epsilon = 1e-6; // tolerance for comparison
+            // if (Math.abs(Number(settleAmount) - Number(shiftData.settleAmount)) > epsilon) {
+            //     throw new Error(`Wrong settleAmount: ${settleAmount} != ${shiftData.settleAmount}`);
+            // }
+            // // if (Number(settleAmount) !== Number(shiftData.settleAmount)) throw new Error(`Wrong settleAmount: ${settleAmount} != ${shiftData.settleAmount}`);
+            // if (settleCoin !== shiftData.settleCoin) throw new Error(`Wrong settleCoin: ${settleCoin} != ${shiftData.settleCoint}`);
+            // if (settleNetwork !== shiftData.settleNetwork) throw new Error(`Wrong settleNetwork: ${settleNetwork} != ${shiftData.settleNetwork}`);
+            // if (settleAddress !== shiftData.settleAddress) throw new Error(`Wrong settleAddress: ${settleAddress} != ${shiftData.settleAddress}`);
 
             return shiftData;
         } catch (err) {
@@ -513,6 +616,105 @@ class ShiftProcessor {
             throw error;
         }
     }
+
+
+    // NOT WORKING
+    // async payWithSameCoinFromUsd({
+    //     depositCoin,
+    //     depositNetwork,
+    //     amountFiat,
+    //     settleCoin,
+    //     settleNetwork,
+    //     settleAddress,
+    //     settleMemo = null,
+    //     userIp = null,
+    //     externalId = null,
+    //     refundAddress = null,
+    //     refundMemo = null
+    // }) {
+    //     this.validateRequiredInputs(depositCoin, depositNetwork, amountFiat)
+
+    //     if (typeof amountFiat !== 'number' || amountFiat <= 0) {
+    //         throw new Error(`Invalid fiat amount provided: ${amountFiat}`);
+    //     }
+
+    //     const depositCoinNetwork = this.helper.getCoinNetwork(depositCoin, depositNetwork);
+
+    //     const intermediaryCoin = this.ALTERNATIVE.COIN;
+    //     const intermediaryNetwork = this.ALTERNATIVE.NETWORK;
+    //     const intermediaryCoinNetwork = this.helper.getCoinNetwork(intermediaryCoin, intermediaryNetwork);
+
+    //     // ?? add 1-2% to fiat amount to cover double shift ??
+    //     const settleAmount = await this.calculateCryptoFromFiat(amountFiat, depositCoinNetwork, intermediaryCoinNetwork);
+
+    //     // Test if the shifts are possible before processing
+    //     await this.isShiftAvailable(depositCoin, depositNetwork, intermediaryCoin, intermediaryNetwork, settleAmount);
+    //     await this.isShiftAvailable(intermediaryCoin, intermediaryNetwork, this.WALLETS[this.MAIN_COIN].coin, this.WALLETS[this.MAIN_COIN].network);
+    //     console.log("pay using same coin hiiiiiiiii")
+
+    //     // Request quote data
+    //     let quoteData = await this.sideshift.requestQuote({
+    //         depositCoin: depositCoin,
+    //         depositNetwork: depositNetwork,
+    //         settleCoin: intermediaryCoin,
+    //         settleNetwork: intermediaryNetwork,
+    //         depositAmount: null,
+    //         settleAmount: Number(settleAmount),
+    //         ...(userIp && { "userIp": userIp }),
+    //         ...(externalId && { "externalId": externalId })
+    //     });
+
+    //     if (quoteData.error) {
+    //         throw new Error(`Failed to get quote: ${quoteData.error}`);
+    //     }
+
+
+    //     // Request shift data
+    //     let fixedShift;
+    //     let variableShift;
+
+    //     // Create variable shift to send coin
+    //     variableShift = await this.sideshift.createVariableShift({
+    //         settleAddress: settleAddress,
+    //         settleCoin: settleCoin,
+    //         settleNetwork: settleNetwork,
+    //         depositCoin: intermediaryCoin,
+    //         depositNetwork: intermediaryNetwork,
+    //         ...(settleMemo && { "settleMemo": String(data.settleData.isMemo[1]) }),
+    //         ...(refundMemo && { refundMemo }),
+    //         ...(refundAddress && { refundAddress }),
+    //         ...(userIp && { "userIp": userIp })
+    //     });
+
+    //     if (variableShift.error) {
+    //         throw new Error(`Failed to create variable shift: ${variableShift.error}`);
+    //     }
+
+
+    //     // Create payment request for the user
+    //     fixedShift = await this.sideshift.createFixedShift({
+    //         settleAddress: variableShift.depositAddress, // variable shift deposit address
+    //         quoteId: quoteData.id,
+    //         ...(refundAddress && { refundAddress }),
+    //         ...(refundMemo && { refundMemo }),
+    //         // ...(settleMemo && { "settleMemo": String(settleMemo) }), // if intermediaryCoin need memo
+    //         ...(userIp && { "userIp": userIp })
+    //     });
+
+    //     if (fixedShift.error) {
+    //         throw new Error(`Failed to create fixed shift: ${fixedShift.error}`);
+    //     }
+
+    //     this._securityValidation({settleCoin: intermediaryCoin, settleNetwork: intermediaryNetwork, settleAddress: variableShift.depositAddress, settleAmount: Number(settleAmount), shift: fixedShift});
+    //     this._securityValidation({settleCoin, settleNetwork, settleAddress, shift: variableShift});
+
+    //     fixedShift.variableShift = variableShift;
+        
+    //     return fixedShift;
+    // }
+
+
+
 
 
 

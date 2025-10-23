@@ -1,0 +1,33 @@
+//- Paywall page
+doctype html
+html 
+	head 
+		if(data)
+			title content ID #{data.contentId}
+		else 
+			title Paywall demo page
+
+		meta( name="robots" content="noindex")
+		meta(name="viewport" content="width=device-width, initial-scale=1.0")
+		link(rel='stylesheet' href='/css/payment-processor.css')
+
+	body 
+
+		if(data)
+			div
+				h1 This page is behind the paywall
+				h2 ID: #{data.contentId} 
+				h3 Message: #{data.message}
+		else
+			form(method="post" action="/paywall").form-checkout
+				h2 PayWall
+
+				input(type="hidden" name="total" value="19.98")
+				input(type="hidden" name="contentId" value="4")
+				
+				h3 Pay 19.98$ to access website content
+				br
+				button(type="submit").btn.paybutton Pay
+
+
+

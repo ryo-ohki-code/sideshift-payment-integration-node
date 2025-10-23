@@ -1,4 +1,4 @@
-// SideShift API payment integration Node.js - Demo shop
+// SideShift API payment Wrapper Node.js - Demo integration
 require('dotenv').config({ quiet: true }); //  debug: true 
 
 const express = require('express');
@@ -104,7 +104,7 @@ const WALLETS = {
 
 
 const SIDESHIFT_CONFIG = {
-    path: "./Sideshift_API_module/sideshiftAPI.js", // Path to module file
+    path: "./sideshiftAPI.js", // Path to module file (inside Shift-Processor/)
     // iconsPath: ICON_PATH,
     secret: process.env.SIDESHIFT_SECRET, // "Your_SideShift_secret";
     id: process.env.SIDESHIFT_ID, // "Your_SideShift_ID"; 
@@ -330,7 +330,7 @@ app.get("/paywall", rateLimiter, function (req, res) {
             throw new Error('Settle Wallet is unavailable, try later or select another payment method');
         }
 
-        return res.render('paywall');
+        return res.render('paywall-demo');
     } catch (err) {
         return res.render('error', { error: { title: "Settle Wallet Error", message: err.message } });
     }
@@ -340,9 +340,9 @@ app.get("/content/:id/:hash", rateLimiter, function (req, res) {
     try {
         const hash = req.params.hash
         if (validHash[hash] && validHash[hash] == req.params.id) {
-            return res.render('paywall', { data: { contentId: validHash[hash], message: "Good Job Human!" } });
+            return res.render('paywall-demo', { data: { contentId: validHash[hash], message: "Good Job Human!" } });
         } else {
-            return res.render('paywall');
+            return res.render('paywall-demo');
         }
 
     } catch (err) {
@@ -385,12 +385,6 @@ app.post("/paywall", paymentLimiter, async function (req, res) {
 
 // Set currency setting on all pages
 app.locals.CURRENCY_SETTING = CURRENCY_SETTING;
-// or inside next
-// app.use((req, res, next) => {
-//     res.locals.CURRENCY_SETTING = CURRENCY_SETTING;
-//     next();
-// });
-
 
 // Payment creation
 // ----------------
@@ -441,7 +435,7 @@ app.post("/create-quote", paymentLimiter, async function (req, res) {
             createDemoCostumer(orderId, total, data.settleAmount, payWithCoin, payWith[1], req.body.memo);
         }
 
-        return res.render('crypto', { ratio: data.pairData, invoice: fakeShopDataBase[orderId] });
+        return res.render('crypto-processing', { ratio: data.pairData, invoice: fakeShopDataBase[orderId] });
     } catch (err) {
         if (verbose) console.error("POST create-quote:", err);
         if (err.message.toLowerCase().includes('amount') && (err.message.includes('is below') || err.message.includes('is above'))) {
@@ -612,7 +606,7 @@ app.get("/payment-status/:id_shift/:id_invoice", rateLimiter, handleCryptoShift,
         case SIDESHIFT_PAYMENT_STATUS.expired:
             return res.redirect(`/cancel/${shift.id}/${invoice.id}`);
         default:
-            return res.render('crypto', {
+            return res.render('crypto-processing', {
                 shift,
                 invoice,
                 CURRENCY_SETTING,
@@ -756,7 +750,7 @@ app.get("/donation-status/:shiftId", rateLimiter, async (req, res) => {
         case SIDESHIFT_PAYMENT_STATUS.expired:
             return res.redirect(`/cancel/${shift.id}`); // You need to adapt the landing page to work without invoiceId
         default:
-            return res.render('crypto', { // You need to adapt crypto.pug and remove the invoice variable
+            return res.render('crypto-processing', { // You need to adapt crypto.pug and remove the invoice variable
                 shift,
                 invoice: {id: "donation"}
             });

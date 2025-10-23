@@ -1,0 +1,84 @@
+//- Coins Select Option
+
+if(coinsDepositList)
+	- coinsDepositList.sort((a, b) => a[0].localeCompare(b[0]));
+
+	- var networks = []
+	- coinsDepositList.forEach(coin => {
+		- var network = coin[0].split('-')[1]
+		- if (!networks.includes(network)) {
+			- networks.push(network)
+		- }
+	- })
+	- networks.sort((a, b) => a[0].localeCompare(b[0]));
+
+	label Select Coin Network (#{networks.length})
+	br
+	input(type="radio" name="network_filter" value="all" checked id="all")
+	label(for="all") All Networks
+	br
+
+	- networks.forEach(network => {
+		input(type="radio" name="network_filter" value=network id=network)
+		label(for=network)= network
+	- })
+
+	br
+	br
+	label#text Select Coin
+	br
+	select(name="pay_with")
+		each coin in coinsDepositList
+			option(value=coin) #{coin[0]}
+			//- option(value=coin) #{coin[0].split('-')[0]}
+
+
+
+
+
+
+script.
+	document.addEventListener('DOMContentLoaded', function() {
+		// Get all radio buttons and select element
+		const radioButtons = document.querySelectorAll('input[name="network_filter"]');
+		const selectElement = document.querySelector('select[name="pay_with"]');
+		
+		// Function to filter options based on selected network
+		function filterOptions() {
+			const selectedNetwork = document.querySelector('input[name="network_filter"]:checked').value;
+			
+			// Get all options from the select
+			const options = Array.from(selectElement.options);
+			let firstVisibleOption = null;
+			
+			options.forEach(option => {
+				const optionValue = JSON.parse(option.value);
+				const optionNetwork = optionValue[0].split('-')[1];
+				//- console.log(selectedNetwork)
+				
+				if (selectedNetwork === 'all' || optionNetwork === selectedNetwork) {
+					option.style.display = '';
+					// Set the first visible option as the new select value
+					if (firstVisibleOption === null) {
+						firstVisibleOption = option.value;
+					}
+				} else {
+					option.style.display = 'none';
+				}
+			});
+			
+			// Update select value to first visible option if we have one
+			if (firstVisibleOption !== null) {
+				selectElement.value = firstVisibleOption;
+			}
+		}
+		
+		// Add event listeners to all radio buttons
+		radioButtons.forEach(radio => {
+			radio.addEventListener('change', filterOptions);
+		});
+		
+		// Initial filter
+		filterOptions();
+	});
+

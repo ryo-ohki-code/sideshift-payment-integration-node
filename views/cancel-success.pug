@@ -1,3 +1,4 @@
+//- views/cancel-success.pug
 doctype html
 html 
 	head 
@@ -8,7 +9,8 @@ html
 		
 		meta( name="robots" content="noindex")
 		meta(name="viewport" content="width=device-width, initial-scale=1.0")
-		link(rel='stylesheet' href='/main.css')
+		
+		link(rel='stylesheet' href='/css/payment-processor.css')
 
 	body 
 
@@ -20,7 +22,7 @@ html
 
 				h3 Payment #{cancel.shift.id} is canceled.
 				p #{cancel.order.cryptoPaymentStatus}
-				p #{cancel.shift.depositAmount} #{cancel.shift.depositCoin} #{cancel.shift.depositNetwork} for #{cancel.order.total} #{SHOP_SETTING.currency}
+				p #{cancel.shift.depositAmount} #{cancel.shift.depositCoin} #{cancel.shift.depositNetwork} for #{cancel.order.total} #{CURRENCY_SETTING.currency}
 
 				p 
 					a(href="/") Go to payment page
@@ -32,7 +34,7 @@ html
 				h1 Payment succeed
 
 				p Payment #{success.shift.id} is confirmed.
-				p You payed #{success.shift.depositAmount} #{success.shift.depositCoin} #{success.shift.depositNetwork} for #{success.order.total} #{SHOP_SETTING.currency}
+				p You payed #{success.shift.depositAmount} #{success.shift.depositCoin} #{success.shift.depositNetwork} for #{success.order.total} #{CURRENCY_SETTING.currency}
 				p Your order #{success.order.id} is completed.
 
 				p Go to you account page

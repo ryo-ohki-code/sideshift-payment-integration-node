@@ -89,8 +89,6 @@
                0 0 25px rgba(107, 111, 114, 0.4);
 }
 
-
-
 .search-controls {
   margin-bottom: 5px;
   padding: 0 0;
@@ -185,7 +183,6 @@
 
 .search-input input:hover {
   border-color: #a7a7a7;
-  /* box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15); */
 }
 
 /* Animated placeholder */
@@ -214,16 +211,6 @@
   font-size: 16px;
 }
 
-/* .search-input input:focus+label,
-.search-input input:not(:placeholder-shown)+label {
-  top: -10px;
-  left: 0;
-  font-size: 12px;
-  color: #667eea;
-  transform: scale(0.8);
-} */
-
-
 
 
 /* Cool Input Text Styles */
@@ -251,16 +238,17 @@
   transition: all 0.3s ease;
 }
 
+
 .cool-input input:hover {
   border-color: #5a67d8;
-  /* box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15); */
 }
 
-/* Animated placeholder */
 .cool-input input::placeholder {
   color: #999;
   font-weight: 400;
 }
+
+
 
 
 

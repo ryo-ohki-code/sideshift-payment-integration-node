@@ -6,33 +6,171 @@ html
 
 		meta( name="robots" content="noindex")
 		meta(name="viewport" content="width=device-width, initial-scale=1.0")
-		link(rel='stylesheet' href='/main.css')
+
+		//- You can choose beween selector or modal overlay
+		link(rel='stylesheet' href='/css/payment-processor.css')
+		//- link(rel='stylesheet' href='/css/select.css')
+		
+		link(rel='stylesheet' href='/css/modal-style.css')
 
 	body 
-
 		if(coinsDepositList)
+			div.form-checkout
+				h1 SideShift Payment Integration Wrapper - Node.js
+				h2 This wrapper provides a complete payment processing solution using the SideShift API.
+				p Designed for USD-based (or EUR, JPY, ...) currency projects, it seamlessly converts fiat amounts to your desired cryptocurrency output and handles all necessary steps to create a payment shift.
+				
 			div
-				h1 Sideshift Payment Integration - Node.js
-					br
+				h2 Custom integration
+				form(method="post" action="/create-quote").form-checkout
 
-				form(method="post" action="/create-quote").custom-select.cool-input
-					p Virtual order ID :
-					input(type="string" pattern="[a-zA-Z0-9]+"  name="shopOrderID" value="cf5HE1Affb6")
+					h3 This is your shop's payment page where you can select from various payment options
+					br
+					h3 Order ID: cf5HE1Affb6
+					br
+					table 
+						th Item 
+						th Qty 
+						th Price 
+						th Total (#{currency})
+						tr 
+						td Collectible Stuff
+						td 2
+						td 64.99
+						td 129.98
+						tr
+						td Other Stuff
+						td 1
+						td 10.00
+						td 10.00
+						tr
+						td 
+						td 
+						td: b Total
+						td 139.98 #{currency}
+					input(type="hidden" name="total" value="139.98")
+					input(type="hidden" name="orderId" value="cf5HE1Affb6")
 					br
 					br
-					
-					p Virtual order total (#{currency}) :
-					input(type="string" pattern="^[0-9]+([.,][0-9]+)?$"  name="total" value="124.00")
-					br
-					br
+					h2 Choose your payment option
+					p.btn.paybutton Credit Card 
+					p.btn.paybutton Paypal 
+					p.btn.paybutton Bank Wire
+					p.btn.paybutton(onclick="toggleVisibility('CRYPTO')") Cryptocurrency
 
-					h3 Pay with crypto
+					div#CRYPTO.hidden
+						br
+						h3 Pay with crypto
 
-					include include/coins-select.pug
+						//- You can choose beween selector or modal overlay
+						//- include include/coins-select.pug
+						include include/coins-modal.pug
 
-					br
-					br
-					button(type="submit").paybutton Pay
+						br
+						button(type="submit").btn.paybutton Preview page
 		
+
+				//- form(method="post" action="/donate").form-checkout
+				//- 	h1 This is a donation example (using custom integration)
+				//- 	h2 Make a donation (USD)
+				//- 	.cool-input
+				//- 		input(type="text" pattern="^[0-9]+([.,][0-9]+)?$"  name="total" value="0.00" style="width:100px;")
+				//- 	input(type="hidden" name="orderId" value="cf5HE1Affb6")
+
+				//- 	br
+				//- 	br
+				//- 	button(type="submit").btn.paybutton Donate
+
+				form(method="post" action="/donate-custom").form-checkout
+					h1 This is a donation example (using variable shift)
+					h2 Make a donation (USD)
+					.cool-input
+						input(type="text" pattern="^[0-9]+([.,][0-9]+)?$"  name="total" value="0.00" style="width:100px;")
+					input(type="hidden" name="orderId" value="cf5HE1Affb6")
+					br
+					br
+					button(type="submit").btn.paybutton Donate
+
+				hr
+				h2 Checkout integration
+				form(method="post" action="/create-checkout").form-checkout
+					br
+					h3 Order ID: cf5HE1Affb6
+					br
+					table 
+						th Item 
+						th Qty 
+						th Price 
+						th Total (#{currency})
+						tr 
+						td Collectible Stuff
+						td 2
+						td 64.99
+						td 129.98
+						tr
+						td Other Stuff
+						td 1
+						td 10.00
+						td 10.00
+						tr
+						td 
+						td 
+						td: b Total
+						td 139.98 #{currency}
+					input(type="hidden" name="total" value="139.98")
+					input(type="hidden" name="orderId" value="cf5HE1Affb6")
+					br
+					br
+					h2 Choose your payment option
+					button(type="button").btn.paybutton Credit Card 
+					br
+					br
+					button(type="button").btn.paybutton Paypal 
+					br
+					br
+					button(type="button").btn.paybutton Bank Wire
+					br
+					br
+					button(type="submit").btn.paybutton Cryptocurrency
+
+
+
+
+
+
+				form(method="post" action="/donate-checkout").form-checkout
+					h1 This is a donation example (using Checkout)
+					h2 Make a donation (USD)
+					.cool-input
+						input(type="text" pattern="^[0-9]+([.,][0-9]+)?$"  name="total" value="0.00" style="width:100px;")
+					input(type="hidden" name="orderId" value="cf5HE1Affb6")
+
+					br
+					br
+					button(type="submit").btn.paybutton Donate
+
+
+				form(method="get" action="/paywall").form-checkout
+					input(type="hidden" name="total" value="19.98")
+					h1 This is a PayWall example (using Checkout)
+					br
+					button(type="submit").btn.paybutton Go to Paywall page
+
+
+
+
+
+
 		else 
 			h1 Error: Not coins list
+
+
+
+
+script.
+	function toggleVisibility(elementId) {
+		const element = document.getElementById(elementId);
+		if (element) {
+			element.classList.toggle('hidden');
+		}
+	}
