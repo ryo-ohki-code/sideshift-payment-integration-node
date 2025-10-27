@@ -37,18 +37,18 @@ const paymentLimiter = rateLimit({
 // Path to store downloaded icons
 const ICON_PATH = './public/icons';
 
-const BASE_URL = process.env.BASE_URL; // Server URL
+const WEBSITE_URL = process.env.WEBSITE_URL; // Server URL
 
 
 // function to Reset/Cancel Crypto payment
 function resetCryptoPayment(shiftId, invoiceId, status) {
     if (fakeShopDataBase[invoiceId]) {
-        fakeShopDataBase[invoiceId].cryptoPaymentOption = "";
-        fakeShopDataBase[invoiceId].cryptoPaymentStatus = status;
-        fakeShopDataBase[invoiceId].cryptoTotal = "";
+        fakeShopDataBase[invoiceId].paymentMethod = "";
+        fakeShopDataBase[invoiceId].paymentStatus = status;
+        fakeShopDataBase[invoiceId].settleAmount = "";
         fakeShopDataBase[invoiceId].payWith = "";
         fakeShopDataBase[invoiceId].isMemo = "";
-        fakeShopDataBase[invoiceId].cryptoFailedPayment.push({ type: "crypto", id: shiftId });
+        fakeShopDataBase[invoiceId].failedPayment.push({ type: "crypto", id: shiftId });
         fakeShopDataBase[invoiceId].status = "waiting";
     }
 }
@@ -57,7 +57,7 @@ function resetCryptoPayment(shiftId, invoiceId, status) {
 function confirmCryptoPayment(shiftId, invoiceId) {
     if (fakeShopDataBase[invoiceId]) {
         fakeShopDataBase[invoiceId].paymentId = shiftId;
-        fakeShopDataBase[invoiceId].cryptoPaymentStatus = "settled";
+        fakeShopDataBase[invoiceId].paymentStatus = "settled";
         fakeShopDataBase[invoiceId].status = "confirmed";
     }
 }
@@ -104,7 +104,7 @@ const WALLETS = {
 
 
 const SIDESHIFT_CONFIG = {
-    path: "./sideshiftAPI.js", // Path to module file (inside Shift-Processor/)
+    path: "./../../Sideshift_API_module/sideshiftAPI.js", // Path to module file ( inside Shift-Processor/)
     // iconsPath: ICON_PATH,
     secret: process.env.SIDESHIFT_SECRET, // "Your_SideShift_secret";
     id: process.env.SIDESHIFT_ID, // "Your_SideShift_ID"; 
@@ -133,13 +133,13 @@ let fakeShopDataBase = {}; // Demo object to simulate your storage
 const fakeInvoice = {
     id: "",
     total: "",
-    cryptoTotal: "",
+    settleAmount: "",
     payWith: "",
     isMemo: false,
-    cryptoPaymentOption: "",
-    cryptoPaymentStatus: "",
+    paymentMethod: "",
+    paymentStatus: "",
     paymentId: "",
-    cryptoFailedPayment: [],
+    failedPayment: [],
     status: ""
 };
 
@@ -148,9 +148,9 @@ function createDemoCostumer(orderId, total, settleAmount, payWithCoin, memo = nu
     fakeShopDataBase[orderId].id = orderId;
     fakeShopDataBase[orderId].total = total;
     fakeShopDataBase[orderId].status = "created";
-    fakeShopDataBase[orderId].cryptoPaymentOption = "crypto";
-    fakeShopDataBase[orderId].cryptoPaymentStatus = "waiting";
-    fakeShopDataBase[orderId].cryptoTotal = settleAmount;
+    fakeShopDataBase[orderId].paymentMethod = "crypto";
+    fakeShopDataBase[orderId].paymentStatus = "waiting";
+    fakeShopDataBase[orderId].settleAmount = settleAmount;
     fakeShopDataBase[orderId].payWith = payWithCoin;
     fakeShopDataBase[orderId].isMemo = memo ? String(memo) : false;
     fakeShopDataBase[orderId].secretHash = "";
@@ -163,6 +163,12 @@ function createDemoCostumer(orderId, total, settleAmount, payWithCoin, memo = nu
 // Chechout payment integration
 //-----------------------------
 
+// Setup the webhook (this will run it once and store data to avoid setting multiple at server restart)
+const { setupSideShiftWebhook } = require('./Shift-Processor/sideshift-webhook.js');
+setupSideShiftWebhook(WEBSITE_URL, process.env.SIDESHIFT_SECRET);
+
+
+// General checkout function
 async function generateCheckout({ settleCoin, settleNetwork, settleAddress, settleMemo = null, settleAmount, successUrl, cancelUrl, userIp }) {
     let checkout;
     try {
@@ -186,16 +192,52 @@ async function generateCheckout({ settleCoin, settleNetwork, settleAddress, sett
     return checkout;
 }
 
-const createSideShiftHook = require('./Shift-Processor/sideshift-webhook.js');
-// createSideShiftHook(BASE_URL, process.env.SIDESHIFT_SECRET); // Uncomment to activate webhook
 
-function webhookDataConfirmation(notification, invoice, wallet) {
-    if (Number(notification.settleAmount) === Number(invoice.cryptoTotal) && notification.settleCoin.toLowerCase() === MAIN_WALLET.coin.toLowerCase() && notification.settleNetwork.toLowerCase() === MAIN_WALLET.network.toLowerCase()) {
-        return true;
-    } else {
+async function webhookDataConfirmation(notification, invoice, wallet) {
+    const checkoutData = await shiftProcessor.getCheckout(donation.id);
+
+    if (!notification || !checkoutData || !invoice || !wallet) return false;
+
+    const [invoiceCoin, invoiceNetwork] = JSON.parse(invoice.payWith).split('-');
+
+    // Extract and normalize data
+    const getData = (data) => ({
+        amount: Number(data?.settleAmount) || invoice?.settleAmount || null, // Adapt to your data structure
+        coin: data?.settleCoin?.toLowerCase() || wallet?.coin || null,
+        network: data?.settleNetwork?.toLowerCase() || wallet?.network || null,
+        address: data?.settleAddress?.toLowerCase() || wallet?.address || null
+    });
+
+    const checkout = getData(checkoutData);
+    const notificationData = getData(notification);
+    const invoiceData = getData(invoice);
+    const walletData = getData(wallet);
+
+    if (walletData.address !== checkout.address ||
+        checkout.address !== notificationData.address) {
         return false;
     }
+
+    if (checkout.amount !== notificationData.amount ||
+        notificationData.amount !== invoiceData.amount) {
+        return false;
+    }
+
+    if (checkout.coin !== notificationData.coin ||
+        notificationData.coin !== invoiceCoin ||
+        invoiceCoin !== wallet.coin) {
+        return false;
+    }
+
+    if (checkout.network !== notificationData.network ||
+        notificationData.network !== invoiceNetwork ||
+        invoiceNetwork !== walletData.network) {
+        return false;
+    }
+
+    return true;
 }
+
 
 // SidesShift notification webhook
 app.post('/api/webhooks/sideshift', (req, res) => {
@@ -210,8 +252,9 @@ app.post('/api/webhooks/sideshift', (req, res) => {
 
     if (!fakeShopDataBase[invoiceId]) return res.status(400).send('Invalid ID');
 
-    if (notification.status === ("completed")) {
-        confirmCryptoPayment(notification.id, invoiceId)
+    if (notification.status === ("settled")) {
+        if (!webhookDataConfirmation(notification, fakeShopDataBase[invoiceId], MAIN_WALLET))
+            confirmCryptoPayment(notification.id, invoiceId)
     }
 
     if (notification.status === "cancelled") {
@@ -239,8 +282,8 @@ app.post("/create-checkout", paymentLimiter, async function (req, res) {
             settleAddress: MAIN_WALLET.address,
             settleMemo: null,
             settleAmount: Number(settleAmount),
-            successUrl: `${BASE_URL}/checkout/success/${orderId}/${secretHash}`,
-            cancelUrl: `${BASE_URL}/checkout/cancel/${orderId}/${secretHash}`,
+            successUrl: `${WEBSITE_URL}/checkout/success/${orderId}/${secretHash}`,
+            cancelUrl: `${WEBSITE_URL}/checkout/cancel/${orderId}/${secretHash}`,
             userIp: shiftProcessor.helper.extractIPInfo(req.ip).address,
         })
 
@@ -272,13 +315,13 @@ app.get("/checkout/:status/:orderId/:secret", rateLimiter, async (req, res) => {
                 order: fakeShopDataBase[invoiceId]
             };
             return res.render('cancel-success', { success: successData });
-        } else if(status === "cancel") {
+        } else if (status === "cancel") {
             const cancelData = {
                 order: fakeShopDataBase[invoiceId]
             };
             return res.render('cancel-success', { cacel: cancelData });
 
-        } else{
+        } else {
             // error
         }
 
@@ -306,8 +349,8 @@ app.post("/donate-checkout", paymentLimiter, async function (req, res) {
         settleAddress: MAIN_WALLET.address,
         settleMemo: null,
         settleAmount: Number(settleAmount),
-        successUrl: `${BASE_URL}/thanks`,
-        cancelUrl: `${BASE_URL}/cancel`,
+        successUrl: `${WEBSITE_URL}/thanks`,
+        cancelUrl: `${WEBSITE_URL}/cancel`,
         userIp: shiftProcessor.helper.extractIPInfo(req.ip).address,
     })
 
@@ -368,8 +411,8 @@ app.post("/paywall", paymentLimiter, async function (req, res) {
         settleAddress: MAIN_WALLET.address,
         settleMemo: null,
         settleAmount: Number(settleAmount),
-        successUrl: `${BASE_URL}/content/${contentId}/${secretHash}`,
-        cancelUrl: `${BASE_URL}/paywall`,
+        successUrl: `${WEBSITE_URL}/content/${contentId}/${secretHash}`,
+        cancelUrl: `${WEBSITE_URL}/paywall`,
         userIp: shiftProcessor.helper.extractIPInfo(req.ip).address,
     })
 
@@ -385,6 +428,7 @@ app.post("/paywall", paymentLimiter, async function (req, res) {
 
 // Set currency setting on all pages
 app.locals.CURRENCY_SETTING = CURRENCY_SETTING;
+
 
 // Payment creation
 // ----------------
@@ -598,7 +642,7 @@ app.get("/payment-status/:id_shift/:id_invoice", rateLimiter, handleCryptoShift,
     }
 
     const depositLink = shiftProcessor.helper.getNetworkExplorer(shift.depositNetwork) + processedDepositAddress;
-    if (req.invoice.cryptoPaymentStatus === "Error_MaxRetryExceeded") return res.redirect(`/cancel/${shift.id}/${invoice.id}`);
+    if (req.invoice.paymentStatus === "Error_MaxRetryExceeded") return res.redirect(`/cancel/${shift.id}/${invoice.id}`);
 
     switch (shift.status) {
         case SIDESHIFT_PAYMENT_STATUS.settled:
@@ -641,7 +685,7 @@ app.get("/cancel/:id_shift/:id_invoice", rateLimiter, handleCryptoShift, async (
             order: req.invoice
         };
 
-        if ((req.invoice.cryptoPaymentStatus === "Error_MaxRetryExceeded" || "Canceled_by_User") || req.shift.status === SIDESHIFT_PAYMENT_STATUS.expired) {
+        if ((req.invoice.paymentStatus === "Error_MaxRetryExceeded" || "Canceled_by_User") || req.shift.status === SIDESHIFT_PAYMENT_STATUS.expired) {
             return res.render('cancel-success', { cancel: cancelData });
         }
 
@@ -721,7 +765,7 @@ app.get("/cancel-shift/:id_shift/:id_invoice", rateLimiter, handleCryptoShift, a
 // Custom integration - Donation using variable shift
 //---------------------------
 
-app.post("/donate-custom", paymentLimiter, async function(req,res) {
+app.post("/donate-custom", paymentLimiter, async function (req, res) {
     const { payWith } = req.body;
 
     const settleCoin = MAIN_WALLET.coin;
@@ -752,7 +796,7 @@ app.get("/donation-status/:shiftId", rateLimiter, async (req, res) => {
         default:
             return res.render('crypto-processing', { // You need to adapt crypto.pug and remove the invoice variable
                 shift,
-                invoice: {id: "donation"}
+                invoice: { id: "donation" }
             });
     }
 });
@@ -769,12 +813,12 @@ shiftProcessor.updateCoinsList(ICON_PATH).then((response) => {
     rawCoinList = response.rawCoinList;
 
     // Check if configuration coins are supported by SideShift
-    const isValidCoin_1 = shiftProcessor.helper.isCoinValid(MAIN_COIN); 
-     
+    const isValidCoin_1 = shiftProcessor.helper.isCoinValid(MAIN_COIN);
+
     if (!isValidCoin_1) {
         console.error("Invalid wallet configuration coin", MAIN_COIN)
         process.exit(1);
-    }   
+    }
     // Uncomment if using 2 wallets configuration
     // const isValidCoin_2 = shiftProcessor.helper.isCoinValid(SECONDARY_COIN);
 
