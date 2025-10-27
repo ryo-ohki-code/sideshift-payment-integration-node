@@ -15,7 +15,7 @@ By nature we recommends to you the Checkout integration as it's permit payment f
 - [Checkout Integration Guide](#checkout-integration-guide)
 - [Custom Integration Guide](#custom-integration-guide)
 - [Features](#features)
-  - [Shift function](#shift-function)
+  - [Detailed Shift function](#detailled-shift-function)
   - [Coin helpers](#coin-helpers)
   - [Explorer Links](#explorer-links)
 
@@ -438,26 +438,27 @@ Refer to the handleCryptoShift middleware and routes: /payment-status, /success/
 
 | Feature	| Description |
 |:---------|:-------------|
-| requestQuoteAndShift | Single-step fixed shift |
-| createFixedShiftFromUsd | Manual shift from USD |
-| createVariableShift | Auto-selects wallet |
-| requestCheckout | |
+| requestQuoteAndShift | Manual Single-step fixed shift |
+| createFixedShiftFromUsd | Automatic shift from USD to configured wallet |
+| createVariableShift | Manual variable shift creation |
+| requestCheckout | Manual checkkout creation|
+| getSettleWallet | Auto-selects wallet |
 | updateCoinsList | Refresh coin data + icons |
 | getAvailableCoins | List of all supported coins |
 | isCoinValid | Validate coin-network combo |
-| isSettleCoinOnline  | |
-| isShiftAvailable  | |
-| testMinMaxDeposit  | |
-| isUsdStableCoin  | |
-| isThisCoinOrToken  | |
+| isSettleCoinOnline  | Verify if configured coin-network are available |
+| isShiftAvailable  | Verify if a shift is posisble |
+| testMinMaxDeposit  | Verify if deposit amount is between min and max |
+| isUsdStableCoin  | Test if coin-network is a stable coin |
+| isThisCoinOrToken  | Test if coin-network is a coin or a token |
 | getTokenAddress | Get token contract address |
-| getDecimals  | |
-| usdToSettleCoin  | |
-| getCoinNetwork  | |
-| getCurrencyConvertionRate  | |
+| getDecimals  | Return the decimal for a coin/token|
+| usdToSettleCoin  | Return settleAmount from a USD input |
+| getCoinNetwork  | Return "coin-network" in a string |
+| getCurrencyConvertionRate  | Get the configured fiat USD convsersion rate|
 | extractIPInfo | Parse user IPs |
-| isSettleOnline  | |
-| sortCoinsAndTokens  | |
+| isSettleOnline  | Verify if coin-network is online |
+| sortCoinsAndTokens  | Return organized networks, coins and tokens |
 | getNetworkExplorer | Generate blockchain explorer link |
 
 
