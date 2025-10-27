@@ -30,7 +30,7 @@ html
 					if(ratio.error.message)
 						p=ratio.error.message
 				else
-					-totalCrypto = Number(invoice.cryptoTotal / Number(ratio.rate)).toFixed(8)
+					-totalCrypto = Number(invoice.settleAmount / Number(ratio.rate)).toFixed(8)
 					-invoiceTotal = Number(invoice.total).toLocaleString(CURRENCY_SETTING.locale,{style:'currency', currency: CURRENCY_SETTING.currency})
 					
 					//- Test shift min/max amount - useless done server side
