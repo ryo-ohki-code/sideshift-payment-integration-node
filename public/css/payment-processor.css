@@ -112,6 +112,14 @@ tr:last-child td {
   border: 1px solid beige;
 }
 
+/* .main-wrapper {
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+} */
+
 .content-wrapper {
   display: flex;
   justify-content: space-between;
@@ -129,12 +137,14 @@ tr:last-child td {
 
 .table-container {
   flex: 1 1 auto;
+  /* Allow flexible sizing */
   min-width: 0;
 }
 
 .content-wrapper table {
   width: 100%;
   table-layout: auto;
+  /* display: block; */
 }
 
 
@@ -170,6 +180,7 @@ tr:last-child td {
 .left-section {
   flex: 1;
   min-width: 300px;
+  /* Prevent shrinking too much */
   margin-right: 20px;
 }
 
