@@ -1,10 +1,12 @@
 # sideshift-API-payment-wrapper Node.js
 
+
 This Node.js library enables cryptocurrency payments in your Node.js project by integrating with the [SideShift API](https://sideshift.ai/) using the [sideshift-api-node](https://github.com/ryo-ohki-code/sideshift-api-node) module, allowing you to integrate cryptocurrency payment processing in any Node.js project with just a few tweaks. It supports real-time payment processing, polling for transaction confirmations, 250+ cryptocurrencies and multi-currency support including USD, EUR, JPY, etc.
 
 This library handle both integration method 'custom integration' and SideShift Checkout integration.
 
 By nature we recommends to you the Checkout integration as it's permit payment from the same coin without needs to set a secondary wallet. 
+
 
 
 ## Table of Contents
@@ -15,11 +17,12 @@ By nature we recommends to you the Checkout integration as it's permit payment f
 - [Checkout Integration Guide](#checkout-integration-guide)
 - [Custom Integration Guide](#custom-integration-guide)
 - [Features](#features)
-  - [Detailed Shift function](#detailled-shift-function)
+  - [Detailed Shift function](#detailed-shift-function)
   - [Coin helpers](#coin-helpers)
   - [Explorer Links](#explorer-links)
 
-  
+
+
 ## Description
 This library wraps the SideShift API with additional helper functions, validation utilities, and background polling support for tracking payment statuses.
 
@@ -35,7 +38,6 @@ It supports:
 - More
 
 
-
 ### Components
 - `ShiftProcessor`: Handles the creation and management of crypto payments via SideShift API.
 - `PaymentPoller`: Polls the SideShift API for payment confirmation and triggers success/failure callbacks.
@@ -43,7 +45,9 @@ It supports:
 - `Helpers`: functions to ease shift processing
 
 
+
 ## Installation 
+
 
 ### Prerequisites
 SideShift account: Ensure you have an active SideShift account.
@@ -56,15 +60,15 @@ Else the library only requires the fs and SideShift API module to work.
 Use this file from the repo: [sideshiftAPI.js](https://github.com/ryo-ohki-code/sideshift-api-node/blob/main/sideshiftAPI.js)
 
 ```bash
-git clone THIS_REPO
-npm install fs
-wget https://raw.githubusercontent.com/ryo-ohki-code/sideshift-api-node/main/sideshiftAPI.js // to move inside Shift-Processor/ directory
+git clone https://github.com/ryo-ohki-code/sideshift-payment-wrapper-node.git
+cd sideshift-payment-wrapper-node/ && npm install fs
+cd Shift-Processor/ && wget https://raw.githubusercontent.com/ryo-ohki-code/sideshift-api-node/main/sideshiftAPI.js
 ```
-
 
 
 ### Demo Server
 Sample configurations for server and client-side usage.
+
 
 **Set .env file**
 ```
@@ -72,6 +76,7 @@ SIDESHIFT_ID=Your_Sideshift_ID
 SIDESHIFT_SECRET=Your_Sideshift_Secret
 WALLET_ADDRESS=0x...
 ```
+
 
 **Install and Start Demo Server**
 ```bash
@@ -88,6 +93,7 @@ const ICON_PATH = './public/icons';
 
 
 ## Configuration
+
 
 ### API Credentials
 ```
@@ -110,6 +116,7 @@ Visit [Sideshift Account Page](https://sideshift.ai/account), see "Prerequisites
 SHOP_SETTING.currency = "USD"; // Supported currencies: USD, EUR, JPY... (ISO 4217 code standard)
 SHOP_SETTING.USD_REFERENCE_COIN = "USDT-bsc"; // Must be a coin-network from the coinList
 ```
+
 
 ### Wallet Configuration
 Important to know: The current version provides a custom and the latest 'checkout' integration.
@@ -185,7 +192,6 @@ const cryptoPoller = new PaymentPoller({
 ```
 
 
-
 ### Initialization
 To work, the module needs access to the SideShift coins list, which must be loaded at server start.
 
@@ -195,6 +201,7 @@ ICON_PATH (save path for the icons)
 ```
 await shiftProcessor.updateCoinsList(ICON_PATH)
 ```
+
 
 **Sample integration**
 ```
@@ -234,10 +241,13 @@ shiftProcessor.updateCoinsList(ICON_PATH).then((response) => {
 ### For custom integration
 See '/selection', '/create-quote' and '/create-payment' routes on the demo server.
 
+
 ### For checkout integration
 See 'create-checkout', '/checkout', ... routes on the demo server.
 
 Other usage example: '/paywall'
+
+
 
 ## Checkout Integration Guide
 It is simple as this:
@@ -266,11 +276,14 @@ Checkout must be used with the webhook notification system. The webhook-manager 
 ```
 setupSideShiftWebhook(WEBSITE_URL, process.env.SIDESHIFT_SECRET);
 ```
+setupSideShiftWebhook will set the webhook once and save the response into a file.
 
+To delete a webhook
 
 
 ## Custom Integration Guide
 Use getSettlementData() to get all necessary data:
+
 
 **getSettlementData(amountFiat, depositCoinNetwork)**:
 The getSettlementData function is an asynchronous settlement calculator that determines the appropriate settlement amount, address, and exchange rate for cryptocurrency shift operations based on fiat deposit amounts and deposit coin-network.
@@ -315,6 +328,7 @@ And then use createCryptocurrencyPayment() to get the shift object (see point 3 
 ### If you want control over each step:
 1. Get Destination Wallet: Use getSettleWallet to obtain the settle wallet details
 
+
 **getSettleWallet(depositCoin)**: Test deposit coin to set settle address
 The getSettleWallet function is a wallet selection mechanism that determines which wallet should be used as the destination for settlement operations based on the input coin type and current wallet availability.
 
@@ -329,6 +343,7 @@ The function returns the appropriate wallet object based on:
 
 
 2. Convert Fiat Amount: Use usdToSettleAmount to convert the fiat amount into the equivalent cryptocurrency deposit amount. You can use getPair to get complementary data like min/max supported amount for the shift.
+
 
 **usdToSettleAmount(amountToShift, depositCoin, settleCoin)**: Convert FIAT amount to cryptocurrency amount
 The usdToSettleAmount function is an asynchronous cryptocurrency conversion utility that calculates the appropriate cryptocurrency amount to shift based on a fiat deposit amount, considering exchange rates and network costs.
@@ -352,6 +367,7 @@ return
 ```
 1.23456789
 ```
+
 
 **Get shift pair information**
 Get all information about a pair, rate, minimum and maximum deposit, ...
@@ -378,6 +394,7 @@ returns pair object from the SideShift API:
 
 
 3. Create Shift: Generate a shift using the SideShift API, this create the fixed shift operation with settlement details
+
 
 **createCryptocurrencyPayment({ depositCoin, depositNetwork, amountFiat, refundAddress = null, refundMemo = null, userIp = null, externalId = null })**: 
 The createCryptocurrencyPayment function is an asynchronous cryptocurrency shift creation utility that processes fiat deposits into cryptocurrency settlements through the SideShift API. It Handles all necessary step to set the shift.
@@ -434,35 +451,43 @@ These functions manage internal state and trigger success/cancel logic based on 
 Refer to the handleCryptoShift middleware and routes: /payment-status, /success/, /cancel/.
 
 
+
 ## Features
 
-| Feature	| Description |
+| Shift Feature	| Description |
 |:---------|:-------------|
 | requestQuoteAndShift | Manual Single-step fixed shift |
 | createFixedShiftFromUsd | Automatic shift from USD to configured wallet |
 | createVariableShift | Manual variable shift creation |
 | requestCheckout | Manual checkkout creation|
 | getSettleWallet | Auto-selects wallet |
+| usdToSettleCoin  | Return settleAmount from a USD input |
+| isShiftAvailable  | Verify if a shift is posisble |
+| testMinMaxDeposit  | Verify if deposit amount is between min and max |
+
+| Coin Feature	| Description |
+|:---------|:-------------|
 | updateCoinsList | Refresh coin data + icons |
 | getAvailableCoins | List of all supported coins |
 | isCoinValid | Validate coin-network combo |
 | isSettleCoinOnline  | Verify if configured coin-network are available |
-| isShiftAvailable  | Verify if a shift is posisble |
-| testMinMaxDeposit  | Verify if deposit amount is between min and max |
 | isUsdStableCoin  | Test if coin-network is a stable coin |
 | isThisCoinOrToken  | Test if coin-network is a coin or a token |
 | getTokenAddress | Get token contract address |
 | getDecimals  | Return the decimal for a coin/token|
-| usdToSettleCoin  | Return settleAmount from a USD input |
 | getCoinNetwork  | Return "coin-network" in a string |
+| isSettleOnline  | Verify if coin-network is online |
+
+| Helpers Feature	| Description |
+|:---------|:-------------|
 | getCurrencyConvertionRate  | Get the configured fiat USD convsersion rate|
 | extractIPInfo | Parse user IPs |
-| isSettleOnline  | Verify if coin-network is online |
 | sortCoinsAndTokens  | Return organized networks, coins and tokens |
 | getNetworkExplorer | Generate blockchain explorer link |
 
 
-### Detailed Shift function:
+
+### Detailed Shift function
 
 **requestQuoteAndShift()**
 One-step creation of a fixed shift.
@@ -590,8 +615,6 @@ return:
 ```
 
 
-
-
 **isShiftAvailable(depositCoin, depositNetwork, settleCoin, settleNetwork, settleAmount = null)**
 Group all tests to verify shift availability
 
@@ -606,9 +629,7 @@ return error or pairData
 Test is coin is USD stable coin
 
 
-
 **isCoinMemo(coinNetwork)**
-
 
 
 **isThisCoinOrToken(coin, network)**:
@@ -698,7 +719,6 @@ or
 isShiftOnline indicate if both deposit and settle are online.
 
 
-
 **sortCoinsAndTokens()**
 Organize networks, coins and tokens into categorized lists.
 
@@ -712,7 +732,6 @@ Return an object with supportedNetworks, mainnetCoins and tokenByChain
 ```
 
 
-
 ### Explorer Links
 
 **getNetworkExplorer(network)**
@@ -720,4 +739,3 @@ Generate explorer link for a given network (e.g., Ethereum).
 ```
 https://3xpl.com/{network}/address/
 ```
-
