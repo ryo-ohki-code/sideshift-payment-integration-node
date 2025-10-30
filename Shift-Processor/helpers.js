@@ -1,4 +1,3 @@
-
 class Helpers {
     constructor(options = {}) {
         const {
@@ -120,12 +119,12 @@ class Helpers {
         if (!input) {
             return null;
         }
-        
+
         if (typeof input !== 'number') {
             input = Number(input);
         }
 
-    if (isNaN(input) || !isFinite(input)) { 
+        if (isNaN(input) || !isFinite(input)) {
             return null;
         }
         return input;
@@ -135,8 +134,6 @@ class Helpers {
         const error = `Error from ${source}: Missing or invalid ${fieldName} parameter`;
         return error;
     }
-
-
 
     // Validate input
     validateString(value, fieldName, source) {
@@ -151,7 +148,7 @@ class Helpers {
     validateNumber(value, fieldName, source) {
         const sanitizedValue = this.sanitizeNumber(value);
 
-        if(!sanitizedValue){
+        if (!sanitizedValue) {
             const error = this._errorMsg(fieldName, source);
             throw new Error(`${error}`);
         }
@@ -162,9 +159,6 @@ class Helpers {
 
         return sanitizedValue;
     }
-
-
-
 
     // Get the Usd conversion rate from other fiat currency
     async getCurrencyConvertionRate(currency) {
@@ -185,7 +179,6 @@ class Helpers {
             throw error;
         }
     }
-
 
     // Used for ratio estimation - Select alternative network for same coin if both deposit and settle are equal
     getAlternativeUSDCoin(inputCoin) {
@@ -222,9 +215,6 @@ class Helpers {
         return `${coin}-${network}`;
     }
 
-
-
-
     // Test if a coin-network if available on sideshift API need coins list from updateCoinsList availableCoins
     isCoinValid(coinNetwork) {
         if (!this.availableCoins) throw new Error('Coins list not available, use updateCoinsList() to load the list')
@@ -232,11 +222,8 @@ class Helpers {
         return isValid;
     }
 
-    // TODO Test if a coin-network use memo
     isCoinMemo(coinNetwork) {
-        // if (!this.availableCoins) throw new Error('Coins list not available, use updateCoinsList() to load the list')
-        // const isValid = this.availableCoins.some(c => c[0].toLowerCase() === coinNetwork.toLowerCase())
-        // return isValid;
+        // TODO Test if a coin-network use memo
     }
 
     // test if a coin or token
@@ -262,38 +249,8 @@ class Helpers {
         return details ? details.contractAddress : false;
     }
 
-    // To get the contract address of a token
-    // getContractAddress(coin, network) {
-    //     const tokenContract = this._findSpecificCoin(coin, network);
-    //     if (tokenContract && tokenContract.tokenDetails && tokenContract.tokenDetails[network]) {
-    //         return tokenContract.tokenDetails[network].contractAddress;
-    //     }
-    //     return null;
-    // }
-
     isThisCoinOrToken(coin, network) {
         return this._isToken(this._findSpecificCoin(coin, network));
-
-        // return this.rawCoinList.map(coin => {
-        //     const hasNetworks = coin.networks && coin.networks.length > 0;
-        //     const hasTokenDetails = coin.tokenDetails && Object.keys(coin.tokenDetails).length > 0;
-
-        //     // If it has networks but no tokenDetails, it's likely a mainnet coin
-        //     // If it has tokenDetails but no networks, it's likely a token
-
-        //     const isMain = hasNetworks && !hasTokenDetails;
-        //     const isToken = hasTokenDetails && !hasNetworks;
-
-        //     return {
-        //         coin: coin.coin,
-        //         name: coin.name,
-        //         isMain,
-        //         isToken,
-        //         // Additional metadata for clarity
-        //         networks: coin.networks || [],
-        //         tokenDetails: coin.tokenDetails ? Object.keys(coin.tokenDetails) : []
-        //     };
-        // });
     }
 
     _findSpecificCoin(coinSymbol, network) {
@@ -301,11 +258,6 @@ class Helpers {
 
             if (coin.coin !== coinSymbol) return null;
             if ((coin.coin === coinSymbol) && (coin.networks && coin.networks.includes(network))) return coin;
-
-            // Check tokenDetails for the specific network
-            // if (coin.tokenDetails && coin.tokenDetails[network]) {
-            //     return true;
-            // }
 
             return null;
         });
@@ -337,9 +289,6 @@ class Helpers {
         // Both must be online to proceed
         return { isDepositOffline, isSettleOffline, isShiftOnline };
     }
-
-
-
 
     // Get decimal for a Token
     getDecimals(coin, network) {
@@ -415,37 +364,6 @@ class Helpers {
 
     }
 
-
-
-
-
-
-    // Block explorer helpers
-
-    // missing exlorer
-    // cosmos
-    // sui
-    // algorand
-    // hyperevm
-    // sonic
-    // bittensor
-    // ronin
-    // internal
-    // sonic
-    // cronos
-    // sui
-    // berachain
-    // core
-    // doge
-    // fetch
-    // hedera
-    // near
-    // algorand
-    // celestia
-    // icp
-    // hyperevm
-
-
     getNetworkExplorer(network) {
         network = this.adaptToExplorer(network);
         return this.networkLinks && this.networkLinks[network];
@@ -495,50 +413,7 @@ class Helpers {
         });
         return sortedObj;
     };
-
-    // generateNetworkExplorerLinks(data) {
-    //     let networkLinks = {};
-
-    //     data.forEach(coin => {
-    //         coin.networks.forEach(network => {
-    //             network = this.adaptToExplorer(network);
-    //             const baseUrl = `https://3xpl.com/${network}/address/`;
-    //             if (network && !this.networkLinks[network]) networkLinks[network] = baseUrl;
-    //         });
-    //     });
-    //     // Return object with supported explorer
-    //     return this.sortedObj(networkLinks);
-    // }
-
 }
 
 
 module.exports = Helpers;
-
-
-
-
-
-
-
-
-
-// let ratio;
-// if (referenceCoin === settleCoin) {
-//     // if setting USD_REFERENCE_COIN is equal to settleCoin then is an alternative coin to get ratio
-//     const alternativeCoin = this._getAlternativeUSDCoin(settleCoin);
-//     if(!alternativeCoin){
-//         throw new Error('Cannot shift between the same coin network pair')
-//     }
-//     ratio = await this.sideshift.getPair(alternativeCoin, settleCoin);
-// } else if (this._isUsdBased(depositCoin) && this._isUsdBased(settleCoin)){
-//     //if depositCoin and settleCoin === USD coin then ratio should be 1, using API gives 0.9845
-//     ratio = {rate: 1};
-// } else {
-//     //if depositCoin is USD then use it, else use reference coin.
-//     if (this._isUsdBased(depositCoin) && depositCoin !== referenceCoin) {
-//         ratio = await this.sideshift.getPair(depositCoin, settleCoin);
-//     } else {
-//         ratio = await this.sideshift.getPair(referenceCoin, settleCoin);
-//     }
-// }
