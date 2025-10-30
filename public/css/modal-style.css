@@ -1,4 +1,3 @@
-
 /* overlay */
 .modal-overlay {
   position: fixed;
@@ -66,6 +65,7 @@
   transform-style: preserve-3d;
   transition: all 1s ease;
 }
+
 .close-btn:hover {
   color: darkred;
   transform: rotateY(180deg);
@@ -82,12 +82,19 @@
 }
 
 
-.options:hover{
+.options:hover {
+  /* animation: text-pulse 1s infinite; */
   color: #3c515f;
   text-shadow: 0 0 8px rgba(204, 220, 230, 0.8),
-               0 0 15px rgba(160, 169, 173, 0.6),
-               0 0 25px rgba(107, 111, 114, 0.4);
+    0 0 15px rgba(160, 169, 173, 0.6),
+    0 0 25px rgba(107, 111, 114, 0.4);
 }
+
+/* @keyframes text-pulse {
+  0% { text-shadow: 0 0 5px rgba(52, 152, 219, 0.5); }
+  50% { text-shadow: 0 0 20px rgba(52, 152, 219, 0.8); }
+  100% { text-shadow: 0 0 5px rgba(52, 152, 219, 0.5); }
+} */
 
 .search-controls {
   margin-bottom: 5px;
@@ -183,6 +190,7 @@
 
 .search-input input:hover {
   border-color: #a7a7a7;
+  /* box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15); */
 }
 
 /* Animated placeholder */
@@ -211,6 +219,16 @@
   font-size: 16px;
 }
 
+/* .search-input input:focus+label,
+.search-input input:not(:placeholder-shown)+label {
+  top: -10px;
+  left: 0;
+  font-size: 12px;
+  color: #667eea;
+  transform: scale(0.8);
+} */
+
+
 
 
 /* Cool Input Text Styles */
@@ -238,16 +256,27 @@
   transition: all 0.3s ease;
 }
 
+/* .cool-input input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+    transform: translateY(-2px);
+} */
 
 .cool-input input:hover {
   border-color: #5a67d8;
+  /* box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15); */
 }
 
+/* Animated placeholder */
 .cool-input input::placeholder {
   color: #999;
   font-weight: 400;
 }
 
+/* .cool-input input:focus::placeholder {
+    color: #667eea;
+    transform: translateX(5px);
+} */
 
 
 
@@ -319,6 +348,18 @@
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
 }
 
+/* Custom dropdown arrow */
+/* .network-select::after {
+  content: "▼";
+  position: absolute;
+  top: 50%;
+  right: 15px;
+  transform: translateY(-50%);
+  color: white;
+  font-size: 12px;
+  pointer-events: none;
+  transition: transform 0.3s ease;
+} */
 
 .network-select:hover::after {
   transform: translateY(-50%) rotate(180deg);
