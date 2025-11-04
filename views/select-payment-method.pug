@@ -50,8 +50,9 @@ html
 			h2 Custom integration
 
 			form(method="post" action="/create-quote").form-checkout
+				h1 Payment processing 
 
-				h3 This is your shop's payment page, where you select payment option
+				h3 Complete your purchase - Select your payment option
 				br
 				+cart_order 
 
@@ -78,7 +79,7 @@ html
 	
 
 			//- form(method="post" action="/donate-custom").form-checkout
-			//- 	h1 This is a donation example (using variable shift)
+			//- 	h1 Donation (using variable shift)
 			//- 	h2 Make a donation (USD)
 			//- 	.cool-input
 			//- 		input(type="text" pattern="^[0-9]+([.,][0-9]+)?$"  name="total" value="0.00" style="width:100px;")
@@ -93,6 +94,7 @@ html
 			h2 Checkout integration
 
 			form(method="post" action="/create-checkout").form-checkout
+				h1 Payment processing 
 				br
 				+cart_order 
 
@@ -114,7 +116,7 @@ html
 
 
 			form(method="post" action="/donate-checkout").form-checkout
-				h1 This is a donation example (using Checkout)
+				h1 Donation
 				h2 Make a donation (USD)
 				.cool-input
 					input(type="text" pattern="^[0-9]+([.,][0-9]+)?$"  name="total" value="0.00" style="width:100px;")
@@ -127,7 +129,7 @@ html
 
 			form(method="" action="").form-checkout
 				input(type="hidden" name="total" value="19.98")
-				h1 This is a PayWall example (using Checkout)
+				h1 PayWall
 				br
 				a(href="/paywall"): button(type="button").btn.paybutton Go to Paywall page
 
