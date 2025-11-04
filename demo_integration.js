@@ -108,7 +108,7 @@ const WALLETS = {
 
 
 const SIDESHIFT_CONFIG = {
-    path: "./sideshiftAPI.js", // Path to module file ( inside Shift-Processor/)
+    path: "./sideshiftAPI.js", // Path to module file (file must be inside Shift-Processor/)
     // iconsPath: ICON_PATH,
     secret: process.env.SIDESHIFT_SECRET, // "Your_SideShift_secret";
     id: process.env.SIDESHIFT_ID, // "Your_SideShift_ID"; 
@@ -257,29 +257,34 @@ async function webhookDataConfirmation(notification, invoice, wallet) {
 
 // SidesShift notification webhook
 app.post('/api/webhooks/sideshift', (req, res) => {
-    const notification = req.body;
-    if (verbose) console.log('Received webhook notification:', notification);
+    try{
+        const notification = req.body;
+        if (verbose) console.log('Received webhook notification:', notification);
 
-    const notificationId = notification.id;
+        const notificationId = notification.id;
 
-    const invoiceId = Object.values(fakeShopDataBase).find(order =>
-        order.paymentData.crypto.paymentId === notificationId
-    );
+        const invoiceId = Object.values(fakeShopDataBase).find(order =>
+            order.paymentData.crypto.paymentId === notificationId
+        );
 
-    if (!fakeShopDataBase[invoiceId]) return res.status(400).send('Invalid ID');
+        if (!fakeShopDataBase[invoiceId]) return res.status(400).send('Invalid ID');
 
-    if (notification.status === "settled") {
-        if (webhookDataConfirmation(notification, fakeShopDataBase[invoiceId], MAIN_WALLET)){
-            confirmCryptoPayment(notification.id, invoiceId)
+        if (notification.status === "settled") {
+            if (webhookDataConfirmation(notification, fakeShopDataBase[invoiceId], MAIN_WALLET)){
+                confirmCryptoPayment(notification.id, invoiceId)
+            }
         }
+
+        if (notification.status === "cancelled") {
+            resetCryptoPayment(notification.id, invoiceId, "cancelled by user")
+        }
+
+        res.status(200).send('Webhook received');
+    }catch(err){
+        // handle error
+        res.status(200).send('Webhook received');
     }
 
-    if (notification.status === "cancelled") {
-        resetCryptoPayment(notification.id, invoiceId, "cancelled by user")
-    }
-
-    // Respond with 200 OK
-    res.status(200).send('Webhook received');
 });
 
 // Checkout routes
@@ -292,6 +297,7 @@ app.post("/create-checkout", paymentLimiter, async function (req, res) {
         const settleAmount = await shiftProcessor.usdToSettleAmount(total, settleCoin, settleNetwork);
 
         const secretHash = "GenerateYourSecretHash";
+        createDemoCostumer(orderId, total, settleAmount, "checkout");
 
         const checkout = await generateCheckout({
             settleCoin: settleCoin,
@@ -321,29 +327,29 @@ app.get("/checkout/:status/:orderId/:secret", rateLimiter, async (req, res) => {
         const orderId = req.params.orderId;
         const secretHash = req.params.secret;
 
-        if (!secretHash || !orderId) throw new Error('Success-checkout - Missing parameter')
-        if (fakeShopDataBase[orderId].paymentData.crypto.secretHash === secretHash) throw new Error('Success-checkout - Invalid secret hash')
+        if (!secretHash || !orderId) throw new Error('Success-checkout - Missing parameter');
+        if (fakeShopDataBase[orderId].paymentData.crypto.secretHash !== secretHash) throw new Error('Success-checkout - Invalid secret hash');
 
 
         if (status === "success") {
-            // Note: You should check shift status as double confirmation before processing
+            // Check shift status as double confirmation before processing
             const checkout = shiftProcessor.sideshift.getCheckout(fakeShopDataBase[orderId].paymentData.crypto.paymentId);
             const successData = {
-                order: fakeShopDataBase[invoiceId]
+                order: fakeShopDataBase[orderId]
             };
             if(checkout.status === "settled"){
-                return res.render('cancel-success', { success: successData });
+                return res.render('cancel-success', { shift: checkout, success: successData });
             } else{
                 return res.render('cancel-success', { unconfirmed: successData });
             }
         } else if (status === "cancel") {
             const cancelData = {
-                order: fakeShopDataBase[invoiceId]
+                order: fakeShopDataBase[orderId]
             };
-            return res.render('cancel-success', { cacel: cancelData });
+            return res.render('cancel-success', { cancel: cancelData });
 
         } else {
-            // error
+            throw new Error('Success-checkout - status error');
         }
 
     } catch (err) {
@@ -388,8 +394,7 @@ app.post("/donate-checkout", paymentLimiter, async function (req, res) {
 // Checkout Paywall
 //-----------------
 
-let validHash = {
-};
+let validHash = {};
 
 app.get("/paywall", rateLimiter, function (req, res) {
     try {
