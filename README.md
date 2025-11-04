@@ -15,7 +15,7 @@ By nature we recommends to you the Checkout integration as it's permit payment f
 - [Configuration](#configuration)
 - [Usage](#usage)
 - [Checkout Integration Guide](#checkout-integration-guide)
-  -[Webhook Manager](#webhook-manager)
+  - [Webhook Manager](#webhook-manager)
 - [Custom Integration Guide](#custom-integration-guide)
 - [Features](#features)
   - [Detailed Shift function](#detailed-shift-function)
