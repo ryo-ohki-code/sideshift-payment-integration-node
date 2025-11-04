@@ -1,11 +1,34 @@
 # sideshift-API-payment-wrapper Node.js
 
+This Node.js library **Simplifies cryptocurrency payment integration** for developers who want to accept crypto payments without building complex blockchain infrastructure.
 
-This Node.js library enables cryptocurrency payments in your Node.js project by integrating with the [SideShift API](https://sideshift.ai/) using the [sideshift-api-node](https://github.com/ryo-ohki-code/sideshift-api-node) module, allowing you to integrate cryptocurrency payment processing in any Node.js project with just a few tweaks. It supports real-time payment processing, polling for transaction confirmations, 250+ cryptocurrencies and multi-currency support including USD, EUR, JPY, etc.
+It enables cryptocurrency payments in your project by interacting with the [SideShift API](https://sideshift.ai/) using the [sideshift-api-node](https://github.com/ryo-ohki-code/sideshift-api-node) module. Allowing you to integrate cryptocurrency payment processing in any Node.js project with just a few tweaks. 
 
-This library handle both integration method 'Custom integration' and [SideShift Pay](https://pay.sideshift.ai/) 'Checkout integration'.
+With real-time payment processing support, polling for transaction confirmations, 250+ cryptocurrencies and multi-currency support including USD, EUR, JPY, etc.
 
-By nature we recommends to you the Checkout integration as it's permit payment from the same coin without needs to set a secondary wallet.
+This library handles both integration methods:
+- 'Custom integration' 
+- [SideShift Pay](https://pay.sideshift.ai/) 'Checkout integration'.
+
+We recommend the Checkout integration as it allows payment from the same coin without needing to set a secondary wallet.
+
+**Features**
+- Real-time payment processing
+- 250+ cryptocurrency support
+- Multi-currency (USD, EUR, JPY)
+- Two integration methods
+- High-level API interface
+
+**Key Capabilities**
+- Request quotes and checkout
+- Create fixed/variable shifts
+- Manage checkout flows
+- Validate coins and networks
+- Download coin icons
+- Get blockchain explorer links
+- Handle IP address parsing
+- Sanitize and validate inputs
+- And more...
 
 
 
@@ -62,13 +85,14 @@ Use this file from the repo: [sideshiftAPI.js](https://github.com/ryo-ohki-code/
 
 ```bash
 git clone https://github.com/ryo-ohki-code/sideshift-payment-wrapper-node.git
-cd sideshift-payment-wrapper-node/ && npm install fs
-cd Shift-Processor/ && wget https://raw.githubusercontent.com/ryo-ohki-code/sideshift-api-node/main/sideshiftAPI.js
+cd sideshift-payment-wrapper-node/
+wget -O Shift-Processor/sideshiftAPI.js https://raw.githubusercontent.com/ryo-ohki-code/sideshift-api-node/main/sideshiftAPI.js
+npm install fs
 ```
 
 
 ### Demo Server
-Sample configurations for server and client-side usage.
+Sample configurations for demo_integration.js server.
 
 
 **Set .env file**
@@ -76,12 +100,13 @@ Sample configurations for server and client-side usage.
 SIDESHIFT_ID=Your_Sideshift_ID 
 SIDESHIFT_SECRET=Your_Sideshift_Secret
 WALLET_ADDRESS=0x...
+WEBSITE_URL=https://your-url.com
 ```
 
 
 **Install and Start Demo Server**
 ```bash
-npm install express pug fs dotenv express-rate-limit
+npm install express pug dotenv express-rate-limit fs
 node demo_integration.js
 ```
 
