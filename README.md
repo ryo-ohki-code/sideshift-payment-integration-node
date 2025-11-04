@@ -3,9 +3,9 @@
 
 This Node.js library enables cryptocurrency payments in your Node.js project by integrating with the [SideShift API](https://sideshift.ai/) using the [sideshift-api-node](https://github.com/ryo-ohki-code/sideshift-api-node) module, allowing you to integrate cryptocurrency payment processing in any Node.js project with just a few tweaks. It supports real-time payment processing, polling for transaction confirmations, 250+ cryptocurrencies and multi-currency support including USD, EUR, JPY, etc.
 
-This library handle both integration method 'custom integration' and SideShift Checkout integration.
+This library handle both integration method 'Custom integration' and [SideShift Pay](https://pay.sideshift.ai/) 'Checkout integration'.
 
-By nature we recommends to you the Checkout integration as it's permit payment from the same coin without needs to set a secondary wallet. 
+By nature we recommends to you the Checkout integration as it's permit payment from the same coin without needs to set a secondary wallet.
 
 
 
@@ -15,6 +15,7 @@ By nature we recommends to you the Checkout integration as it's permit payment f
 - [Configuration](#configuration)
 - [Usage](#usage)
 - [Checkout Integration Guide](#checkout-integration-guide)
+  -[Webhook Manager](#webhook-manager)
 - [Custom Integration Guide](#custom-integration-guide)
 - [Features](#features)
   - [Detailed Shift function](#detailed-shift-function)
@@ -208,29 +209,36 @@ await shiftProcessor.updateCoinsList(ICON_PATH)
 // Start server after receiving the coin list from sideshift API
 shiftProcessor.updateCoinsList(ICON_PATH).then((response) => {
     console.log('Initial coins list loaded');
-	availableCoins = response.availableCoins;
+    availableCoins = response.availableCoins;
+    rawCoinList = response.rawCoinList;
 
-    // Check if configuration coins are supported by SideShift, remove SECONDARY_COIN is using 'checkout integration'
-    const isValidCoin_1 = shiftProcessor.isCoinValid(MAIN_COIN);
-    const isValidCoin_2 = shiftProcessor.isCoinValid(SECONDARY_COIN);
+    // Check if configuration coins are supported by SideShift
+    const isValidCoin_1 = shiftProcessor.helper.isCoinValid(MAIN_COIN);
 
-    if (!isValidCoin_1 || !isValidCoin_2) {
-        console.error("Invalid configuration coin", MAIN_COIN, SECONDARY_COIN)
+    if (!isValidCoin_1) {
+        console.error("Invalid wallet configuration coin", MAIN_COIN)
         process.exit(1);
     }
-    
-    // Start server
-    https.createServer(options, app).listen(PORT, () => {
-        console.log(`HTTPS Server running at https://localhost:${PORT}/`);
+    // Uncomment if using 2 wallets configuration
+    // const isValidCoin_2 = shiftProcessor.helper.isCoinValid(SECONDARY_COIN);
+    // if (!!isValidCoin_2) {
+    //     console.error("Invalid wallet configuration coin", SECONDARY_COIN)
+    //     process.exit(1);
+    // }
+
+    app.listen(port, () => {
+        console.log(`HTTP Server running at http://localhost:${port}/`);
     });
-    
+
     setInterval(async () => {
         const result = await shiftProcessor.updateCoinsList(ICON_PATH);
-        // Update global variables every 12h
+        // Update global variables
         availableCoins = result.availableCoins;
+        rawCoinList = result.rawCoinList;
     }, 12 * 60 * 60 * 1000);
+
 }).catch(err => {
-    console.error('Failed to load initial coins list:', err);
+    console.error('Failed to load initial settings:', err);
     process.exit(1);
 });
 ```
@@ -243,7 +251,7 @@ See '/selection', '/create-quote' and '/create-payment' routes on the demo serve
 
 
 ### For checkout integration
-See 'create-checkout', '/checkout', ... routes on the demo server.
+See 'create-checkout', '/checkout/:status/..."', '/api/webhooks/sideshift' routes on the demo server.
 
 Other usage example: '/paywall'
 
@@ -258,8 +266,8 @@ const checkout = await shiftProcessor.requestCheckout({
     settleAddress: MAIN_WALLET.address,
     settleMemo: null,
     settleAmount: Number(settleAmount),
-    successUrl: `${BASE_URL}/success-checkout/${orderId}&secret=${secretHash}`,
-    cancelUrl: `${BASE_URL}/cancel-checkout/${orderId}&secret=${secretHash}`,
+    successUrl: `${WEBSITE_URL}/checkout/success/${orderId}/${secretHash}`,
+    cancelUrl: `${WEBSITE_URL}/checkout/cancel/${orderId}/${secretHash}`,
     userIp: shiftProcessor.helper.extractIPInfo(req.ip).address,
 })
 res.redirect(checkout.link);
@@ -269,20 +277,25 @@ Users are redirected through SideShift's checkout portal. Manual user cancellati
 
 This integration does not require the polling system since redirection is handled by SideShift. See /api/webhooks/sideshift route.
 
-Refer to /success-checkout and /cancel-checkout routes.
+Refer to /checkout/:status/:orderId/:secret" route for success and cancel status.
 
-Checkout must be used with the webhook notification system. The webhook-manager helps set up the webhook connection and '/api/webhooks/sideshift' POST route. Use webhookDataConfirmation to validate incoming data.
 
+### Webhook Manager
+Checkout must be used with the webhook notification system. The webhook-manager helps set up the webhook connection and '/api/webhooks/sideshift' POST route. You can use webhookDataConfirmation to validate incoming data.
+
+Create a webhook:
 ```
-setupSideShiftWebhook(WEBSITE_URL, process.env.SIDESHIFT_SECRET);
+setupSideShiftWebhook(WEBSITE_URL, process.env.SIDESHIFT_SECRET); //will set the webhook once and save the response into a file.
 ```
-setupSideShiftWebhook will set the webhook once and save the response into a file.
-
-To delete a webhook
+Delete a webhook:
+```
+setupSideShiftWebhook(process.env.SIDESHIFT_SECRET); // Delete the saved webhook
+```
 
 
 ## Custom Integration Guide
-Use getSettlementData() to get all necessary data:
+Use getSettlementData() to get all necessary data.
+And then use createCryptocurrencyPayment() to get the shift object (see point 3 bellow).
 
 
 **getSettlementData(amountFiat, depositCoinNetwork)**:
@@ -320,9 +333,6 @@ Return
 settleData: Destination wallet information from getSettleWallet()
 depositAmount: Calculated cryptocurrency amount to pay
 pairData: Exchange pair information including rate, minimum, and maximum limits
-
-And then use createCryptocurrencyPayment() to get the shift object (see point 3 bellow).
-
 
 
 ### If you want control over each step:
@@ -397,7 +407,7 @@ returns pair object from the SideShift API:
 
 
 **createCryptocurrencyPayment({ depositCoin, depositNetwork, amountFiat, refundAddress = null, refundMemo = null, userIp = null, externalId = null })**: 
-The createCryptocurrencyPayment function is an asynchronous cryptocurrency shift creation utility that processes fiat deposits into cryptocurrency settlements through the SideShift API. It Handles all necessary step to set the shift.
+The createCryptocurrencyPayment function is an asynchronous cryptocurrency shift creation utility that processes fiat amount into cryptocurrency settlements through the SideShift API. It Handles all necessary step to set the shift.
 
 Parameters
 - depositCoin: The deposit coin symbol (e.g., 1INCH)
@@ -478,7 +488,7 @@ Refer to the handleCryptoShift middleware and routes: /payment-status, /success/
 | getCoinNetwork  | Return "coin-network" in a string |
 | isSettleOnline  | Verify if coin-network is online |
 
-| Helpers Feature	| Description |
+| Other Feature	| Description |
 |:---------|:-------------|
 | getCurrencyConvertionRate  | Get the configured fiat USD convsersion rate|
 | extractIPInfo | Parse user IPs |
