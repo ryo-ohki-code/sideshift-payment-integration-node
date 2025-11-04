@@ -72,6 +72,7 @@ CURRENCY_SETTING.SHIF_LIMIT_USD = 20000; // USD
 // Set currency setting on all pages
 app.locals.CURRENCY_SETTING = CURRENCY_SETTING;
 
+
 const SIDESHIFT_PAYMENT_STATUS = {
     waiting: "waiting",
     pending: "pending",
@@ -267,7 +268,7 @@ app.post('/api/webhooks/sideshift', (req, res) => {
 
     if (!fakeShopDataBase[invoiceId]) return res.status(400).send('Invalid ID');
 
-    if (notification.status === ("settled")) {
+    if (notification.status === "settled") {
         if (webhookDataConfirmation(notification, fakeShopDataBase[invoiceId], MAIN_WALLET)){
             confirmCryptoPayment(notification.id, invoiceId)
         }
@@ -326,11 +327,15 @@ app.get("/checkout/:status/:orderId/:secret", rateLimiter, async (req, res) => {
 
         if (status === "success") {
             // Note: You should check shift status as double confirmation before processing
-
+            const checkout = shiftProcessor.sideshift.getCheckout(fakeShopDataBase[orderId].paymentData.crypto.paymentId);
             const successData = {
                 order: fakeShopDataBase[invoiceId]
             };
-            return res.render('cancel-success', { success: successData });
+            if(checkout.status === "settled"){
+                return res.render('cancel-success', { success: successData });
+            } else{
+                return res.render('cancel-success', { unconfirmed: successData });
+            }
         } else if (status === "cancel") {
             const cancelData = {
                 order: fakeShopDataBase[invoiceId]
@@ -353,24 +358,29 @@ app.get("/checkout/:status/:orderId/:secret", rateLimiter, async (req, res) => {
 //------------------
 
 app.post("/donate-checkout", paymentLimiter, async function (req, res) {
-    const { total } = req.body;
+    try{    
+        const { total } = req.body;
 
-    const settleCoin = MAIN_WALLET.coin;
-    const settleNetwork = MAIN_WALLET.network;
-    const settleAmount = await shiftProcessor.usdToSettleAmount(total, settleCoin, settleNetwork);
+        const settleCoin = MAIN_WALLET.coin;
+        const settleNetwork = MAIN_WALLET.network;
+        const settleAmount = await shiftProcessor.usdToSettleAmount(total, settleCoin, settleNetwork);
 
-    const checkout = await generateCheckout({
-        settleCoin: settleCoin,
-        settleNetwork: settleNetwork,
-        settleAddress: MAIN_WALLET.address,
-        settleMemo: null,
-        settleAmount: Number(settleAmount),
-        successUrl: `${WEBSITE_URL}/thanks`,
-        cancelUrl: `${WEBSITE_URL}/cancel`,
-        userIp: shiftProcessor.helper.extractIPInfo(req.ip).address,
-    })
+        const checkout = await generateCheckout({
+            settleCoin: settleCoin,
+            settleNetwork: settleNetwork,
+            settleAddress: MAIN_WALLET.address,
+            settleMemo: null,
+            settleAmount: Number(settleAmount),
+            successUrl: `${WEBSITE_URL}/thanks`, // You must set this route
+            cancelUrl: `${WEBSITE_URL}/cancel`, // You must set this route
+            userIp: shiftProcessor.helper.extractIPInfo(req.ip).address,
+        })
 
-    res.redirect(checkout.link);
+        res.redirect(checkout.link);
+    } catch (err) {
+        if (verbose) console.error("Error in donate-checkout route:", err);
+        return res.status(500).render('error', { error: { title: "Error", message: err.message } });
+    }
 });
 
 
@@ -391,7 +401,7 @@ app.get("/paywall", rateLimiter, function (req, res) {
 
         return res.render('paywall-demo');
     } catch (err) {
-        return res.render('error', { error: { title: "Settle Wallet Error", message: err.message } });
+        return res.render('error', { error: { title: "Paywall Error", message: err.message } });
     }
 });
 
@@ -405,34 +415,38 @@ app.get("/content/:id/:hash", rateLimiter, function (req, res) {
         }
 
     } catch (err) {
-        return res.render('error', { error: { title: "Settle Wallet Error", message: err.message } });
+        return res.render('error', { error: { title: "Paywall Error", message: err.message } });
     }
 });
 
 app.post("/paywall", paymentLimiter, async function (req, res) {
-    const { total, contentId } = req.body;
+    try{
+        const { total, contentId } = req.body;
 
-    const settleCoin = MAIN_WALLET.coin;
-    const settleNetwork = MAIN_WALLET.network;
-    const settleAmount = await shiftProcessor.usdToSettleAmount(total, settleCoin, settleNetwork);
+        const settleCoin = MAIN_WALLET.coin;
+        const settleNetwork = MAIN_WALLET.network;
+        const settleAmount = await shiftProcessor.usdToSettleAmount(total, settleCoin, settleNetwork);
 
-    const secretHash = "HereSomeSecretHash"
-    // Store Valid hash and associated content
-    validHash[secretHash] = contentId; // access content nr 5
+        const secretHash = "HereSomeSecretHash"
+        // Store Valid hash and associated content
+        validHash[secretHash] = contentId; // Hash for content nr 5
 
 
-    const checkout = await generateCheckout({
-        settleCoin: settleCoin,
-        settleNetwork: settleNetwork,
-        settleAddress: MAIN_WALLET.address,
-        settleMemo: null,
-        settleAmount: Number(settleAmount),
-        successUrl: `${WEBSITE_URL}/content/${contentId}/${secretHash}`,
-        cancelUrl: `${WEBSITE_URL}/paywall`,
-        userIp: shiftProcessor.helper.extractIPInfo(req.ip).address,
-    })
+        const checkout = await generateCheckout({
+            settleCoin: settleCoin,
+            settleNetwork: settleNetwork,
+            settleAddress: MAIN_WALLET.address,
+            settleMemo: null,
+            settleAmount: Number(settleAmount),
+            successUrl: `${WEBSITE_URL}/content/${contentId}/${secretHash}`,
+            cancelUrl: `${WEBSITE_URL}/paywall`,
+            userIp: shiftProcessor.helper.extractIPInfo(req.ip).address,
+        })
 
-    res.redirect(checkout.link);
+        res.redirect(checkout.link);
+    } catch (err) {
+        return res.render('error', { error: { title: "Paywall Error", message: err.message } });
+    }
 });
 
 
