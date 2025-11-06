@@ -38,7 +38,8 @@ class ShiftProcessor {
         this.MAIN_COIN = Object.keys(this.WALLETS)[0] || "no_wallet";
         this.SECONDARY_COIN = Object.keys(this.WALLETS)[1] || "no_wallet";
         this.CURRENCY_SETTING = currencySetting;
-        this.DECIMAL = 6;
+        this.DECIMALS = 8;
+        this.DECIMALS_SOLANA = 6;
 
         this.ALTERNATIVE = {};
         this.ALTERNATIVE.COIN = "BNB";
@@ -50,13 +51,12 @@ class ShiftProcessor {
     }
 
     _lockNoWallet(functionName) {
-        // if (this.MAIN_COIN === "no_wallet" || this.SECONDARY_COIN === "no_wallet") {
         if (this.MAIN_COIN === "no_wallet") {
             throw new Error(`No wallet set, function ${functionName} unavailable. Set WALLET to use.`)
         }
     }
 
-    _safeMultiply(a, b, decimals = this.DECIMAL) {
+    _safeMultiply(a, b, decimals = this.DECIMALS) {
         return parseFloat((a * b).toFixed(decimals));
     }
 
@@ -68,8 +68,6 @@ class ShiftProcessor {
 
         this.rawCoinList.forEach(element => {
             const networks = element.networks.length ? element.networks : [element.mainnet];
-            // const hasNetworksWithMemo = element.networksWithMemo && element.networksWithMemo.length > 0;
-            // const isCoinAvailable = element.depositOffline === false;
 
             networks.forEach(net => {
                 if (`${element.coin}-${net}` === this.MAIN_COIN) {
@@ -143,18 +141,18 @@ class ShiftProcessor {
         }
 
         let amount;
-
+        let decimals = this.DECIMALS;
+        
         // Convert FIAT to USD
         const fiatExchangeRate = await this.helper.getCurrencyConvertionRate(this.CURRENCY_SETTING.currency);
-        // let amountFiat = Number(amountToShift) * fiatExchangeRate;
-        // amountFiat = amountFiat * 1.0002;
 
         let amountFiat = parsedAmount * fiatExchangeRate;
-        amountFiat = this._safeMultiply(amountFiat, 1.0002, this.DECIMAL); // total + 0.02% to compensate shift and network cost.
+        amountFiat = this._safeMultiply(amountFiat, 1.0002, this.DECIMALS_SOLANA); // total + 0.02% to compensate shift and network cost.
 
         // Test is settleCoin is a stable coin
         if (this.helper.isUsdStableCoin(settleCoinNetwork)) {
             amount = amountFiat;
+            decimals = this.DECIMALS_SOLANA;
         } else {
             // If not stable coin then calculate appropriate ratio for the shift
             const ratio = await this._getRatio(referenceCoin, depositCoinNetwork, settleCoinNetwork);
@@ -163,11 +161,13 @@ class ShiftProcessor {
                 throw new Error('Failed to get exchange rate');
             }
 
-            amount = this._safeMultiply(amountFiat, ratio.rate, 6);
+            amount = this._safeMultiply(amountFiat, ratio.rate, decimals);
             // console.log('Debug:', { amountFiat, rate: ratio.rate, result: amount });
         }
 
-        return parseFloat(amount.toFixed(this.DECIMAL));
+        if(depositCoinNetwork.includes('solana')) decimals = this.DECIMALS_SOLANA
+
+        return parseFloat(amount.toFixed(decimals));
     }
 
     // Convert an USD amount to a settle coin-network cryptocurrency amount
@@ -203,7 +203,6 @@ class ShiftProcessor {
 
         return { settleData: settleData, settleAmount: settleAmount, pairData: getPairData }
     }
-
 
     // Test if amount is min < amount < max and return pair data
     async testMinMaxDeposit(depositCoinNetwork, settleCoinNetwork, settleAmount) {
@@ -344,9 +343,6 @@ class ShiftProcessor {
 
             // Security check settleAmount, depositCoin, depositNetwork and settleAddress
             this._securityValidation({settleCoin: data.settleData.coin, settleNetwork: data.settleData.network, settleAddress: data.settleData.address, shift: shiftData});
-            // if (data.settleData.coin.toLowerCase() !== shiftData.settleCoin.toLowerCase()) throw new Error(`Wrong settleCoin: ${data.settleData.coin} != ${shiftData.settleCoint}`);
-            // if (data.settleData.network.toLowerCase() !== shiftData.settleNetwork.toLowerCase()) throw new Error(`Wrong settleNetwork: ${data.settleData.network} != ${shiftData.settleNetwork}`);
-            // if (data.settleData.address.toLowerCase() !== shiftData.settleAddress.toLowerCase()) throw new Error(`Wrong settleAddress: ${data.settleData.address} != ${shiftData.settleAddress}`);
 
             return shiftData;
         } catch (err) {
@@ -386,12 +382,17 @@ class ShiftProcessor {
 
         // Deposit specific - Check for specific decimal else set at 6
         if (depositAmount) {
-            const decimal = this.helper.getDecimals(depositCoin, depositNetwork);
-            if (decimal && decimal != 6) {
+            let decimal = this.helper.getDecimals(depositCoin, depositNetwork);
+            if (decimal && decimal != this.DECIMALS) {
                 if (this.verbose) console.log(`Specific decimal detected for ${depositCoin} (${depositNetwork}): ${decimal}`);
                 settleAmount = parseFloat(Number(settleAmount).toFixed(decimal));
             } else {
-                settleAmount = parseFloat(Number(settleAmount).toFixed(this.DECIMAL));
+                if(depositNetwork.toLowerCase() === "solana" || this.helper.isUsdStableCoin(this.helper.getCoinNetwork(depositCoin, depositNetwork))) {
+                    decimal = this.DECIMALS_SOLANA;
+                } else{
+                    decimal = this.DECIMALS;
+                }
+                settleAmount = parseFloat(Number(settleAmount).toFixed(decimal));
             }
         }
 
@@ -456,7 +457,6 @@ class ShiftProcessor {
                 ...(userIp && { "userIp": userIp })
             });
 
-
             return shiftData;
         } catch (err) {
             const error = new Error(err.message || 'Failed to create fixed shift')
@@ -512,8 +512,6 @@ class ShiftProcessor {
                 ...(externalId && { "externalId": externalId })
             })
 
-
-
             // Security check settleAmount, depositCoin, depositNetwork and settleAddress
             this._securityValidation({settleCoin, settleNetwork, settleAddress, settleAmount, shift: shiftData});
 
@@ -535,7 +533,6 @@ class ShiftProcessor {
     getAvailablecoins() {
         return { availableCoins: this.availableCoins, lastCoinList: this.lastCoinList, stableCoinList: this.stableCoinList, rawCoinList: this.rawCoinList, networkExplorerLinks: this.networkLinks };
     }
-
 
     // return array of available USD coins
     _filterUsdCoinsAndNetworks(availableCoins) {
@@ -693,6 +690,7 @@ class ShiftProcessor {
             console.error('Error in _downloadCoinIcons:', error.message);
         }
     }
+
 }
 
 
