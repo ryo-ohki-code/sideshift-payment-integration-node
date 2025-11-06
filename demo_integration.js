@@ -71,6 +71,11 @@ CURRENCY_SETTING.SHIF_LIMIT_USD = 20000; // USD
 
 // Set currency setting on all pages
 app.locals.CURRENCY_SETTING = CURRENCY_SETTING;
+// or inside next
+// app.use((req, res, next) => {
+//     res.locals.CURRENCY_SETTING = CURRENCY_SETTING;
+//     next();
+// });
 
 
 const SIDESHIFT_PAYMENT_STATUS = {
@@ -210,7 +215,7 @@ async function generateCheckout({ settleCoin, settleNetwork, settleAddress, sett
 
 
 async function webhookDataConfirmation(notification, invoice, wallet) {
-    const checkoutData = await shiftProcessor.getCheckout(donation.id);
+    const checkoutData = await shiftProcessor.sideshift.getCheckout(donation.id);
 
     if (!notification || !checkoutData || !invoice || !wallet) return false;
 
@@ -218,10 +223,10 @@ async function webhookDataConfirmation(notification, invoice, wallet) {
 
     // Extract and normalize data
     const getData = (data) => ({
-        amount: Number(data?.settleAmount) || invoice?.paymentData?.crypto?.settleAmount || null, // Adapt to your data structure
-        coin: data?.settleCoin?.toLowerCase() || wallet?.coin || null,
-        network: data?.settleNetwork?.toLowerCase() || wallet?.network || null,
-        address: data?.settleAddress?.toLowerCase() || wallet?.address || null
+        amount: Number(data?.settleAmount) ||(invoice?.paymentData?.crypto?.settleAmount && Number(invoice?.paymentData?.crypto?.settleAmount)) || 'unknown', // Adapt to your data structure
+        coin: (data?.settleCoin && data.settleCoin.toLowerCase()) || (data?.coin && data.coin.toLowerCase()) || 'unknown',
+        network: (data?.settleNetwork && data.settleNetwork.toLowerCase()) || (data?.network && data.network.toLowerCase()) || 'unknown',
+        address: (data?.settleAddress && data.settleAddress.toLowerCase()) || (data?.address && data.address.toLowerCase()) || 'unknown'
     });
 
     const checkout = getData(checkoutData);
@@ -234,8 +239,7 @@ async function webhookDataConfirmation(notification, invoice, wallet) {
         return false;
     }
 
-    if (checkout.amount !== notificationData.amount ||
-        notificationData.amount !== invoiceData.amount) {
+    if (checkout.amount !== invoiceData.amount) {
         return false;
     }
 
@@ -269,13 +273,13 @@ app.post('/api/webhooks/sideshift', (req, res) => {
 
         if (!fakeShopDataBase[invoiceId]) return res.status(400).send('Invalid ID');
 
-        if (notification.status === "settled") {
+        if (notification.status === "settled" && fakeShopDataBase[invoiceId].paymentStatus !== "settled") {
             if (webhookDataConfirmation(notification, fakeShopDataBase[invoiceId], MAIN_WALLET)){
                 confirmCryptoPayment(notification.id, invoiceId)
             }
         }
 
-        if (notification.status === "cancelled") {
+        if (notification.status === "cancelled" && fakeShopDataBase[invoiceId].paymentStatus !== "cancelled by user") {
             resetCryptoPayment(notification.id, invoiceId, "cancelled by user")
         }
 
@@ -297,6 +301,8 @@ app.post("/create-checkout", paymentLimiter, async function (req, res) {
         const settleAmount = await shiftProcessor.usdToSettleAmount(total, settleCoin, settleNetwork);
 
         const secretHash = "GenerateYourSecretHash";
+        
+        // Add data to DB
         createDemoCostumer(orderId, total, settleAmount, "checkout");
 
         const checkout = await generateCheckout({
@@ -712,7 +718,7 @@ app.get("/success/:id_shift/:id_invoice", rateLimiter, handleCryptoShift, async 
 app.get("/cancel/:id_shift/:id_invoice", rateLimiter, handleCryptoShift, async (req, res) => {
     try {
         const cancelData = {
-            shift: req.shift,
+            // shift: req.shift,
             order: req.invoice
         };
 
