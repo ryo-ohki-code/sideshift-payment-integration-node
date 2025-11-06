@@ -47,6 +47,7 @@ div {
 }
 
 
+
 /* Order table */
 table {
   width: 70%;
@@ -81,10 +82,6 @@ tr:last-child td {
 
 
 
-
-
-
-
 /* payment page */
 .payment-container {
   max-width: 1000px;
@@ -111,14 +108,6 @@ tr:last-child td {
   overflow: hidden;
   border: 1px solid beige;
 }
-
-/* .main-wrapper {
-  position: absolute;
-  top: 45%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 100%;
-} */
 
 .content-wrapper {
   display: flex;
@@ -147,7 +136,6 @@ tr:last-child td {
   /* display: block; */
 }
 
-
 .content-wrapper th {
   white-space: nowrap;
   padding: 8px;
@@ -166,7 +154,6 @@ tr:last-child td {
   background-color: #f2f2f2;
   min-width: 0;
 }
-
 
 .content-wrapper td {
   width: 900px;
@@ -193,17 +180,11 @@ tr:last-child td {
   min-width: 300px;
 }
 
-
-
 .send-amount {
   font-weight: bold;
   margin: 5px 0;
   color: #2c5aa0;
 }
-
-
-
-
 
 .wallet-container {
   display: flex;
@@ -215,7 +196,6 @@ tr:last-child td {
 .explorer-link {
   margin-left: 8px;
 }
-
 
 button.copy-btn {
   background-color: #f0f0f094;
@@ -230,7 +210,6 @@ button.copy-btn:hover {
 .copy-btn img {
   vertical-align: middle;
 }
-
 
 .wallet-info {
   margin: 5px 0;
@@ -263,9 +242,6 @@ button {
   font-size: 14px;
   transition: background-color 0.3s;
 }
-
-
-
 
 .metamask-btn {
   border-radius: 8px;
@@ -367,7 +343,6 @@ button {
 
 }
 
-
 @media (max-width: 500px) {
   .payment-container {
     padding: 10px;
@@ -386,15 +361,6 @@ button {
     width: 100%;
   }
 }
-
-
-
-
-
-
-
-
-
 
 
 
@@ -443,11 +409,6 @@ button {
   font-weight: bold;
   color: #dc3545;
 }
-
-
-
-
-
 
 
 
@@ -528,7 +489,6 @@ button {
 }
 
 
-
 .classic-btn {
   background-color: #28a745;
   color: white;
@@ -554,7 +514,6 @@ button {
 
 
 
-
 /* QR code */
 .qr-container {
   margin: 0px;
@@ -571,8 +530,6 @@ canvas {
 
 
 
-
-
 @media (max-width: 800px) {
   .btn {
     width: 220px;
@@ -580,8 +537,6 @@ canvas {
     font-size: 14px;
   }
 }
-
-
 
 @media (max-width: 500px) {
   div {
