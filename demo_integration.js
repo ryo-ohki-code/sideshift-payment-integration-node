@@ -113,7 +113,7 @@ const WALLETS = {
 
 
 const SIDESHIFT_CONFIG = {
-    path: "./sideshiftAPI.js", // Path to module file (file must be inside Shift-Processor/)
+    path: "./../sideshift-api-node/Compiled/sideshift-api.js", // Path to module file
     // iconsPath: ICON_PATH,
     secret: process.env.SIDESHIFT_SECRET, // "Your_SideShift_secret";
     id: process.env.SIDESHIFT_ID, // "Your_SideShift_ID"; 
