@@ -9,7 +9,7 @@ class WebhookManager {
     try {
       const statusData = {
         initialized: true,
-        data: data,
+        data: data.data || data,
         timestamp: new Date().toISOString()
       };
       
