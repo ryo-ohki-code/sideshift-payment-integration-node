@@ -7,8 +7,8 @@ It enables cryptocurrency payments in your project by interacting with the [Side
 With real-time payment processing support, polling for transaction confirmations, 250+ cryptocurrencies and multi-currency support including USD, EUR, JPY, etc.
 
 This library handles both integration methods:
-- 'Custom integration' 
-- [SideShift Pay](https://pay.sideshift.ai/) 'Checkout integration'.
+- Custom integration
+- [SideShift Pay](https://pay.sideshift.ai/) Checkout integration
 
 We recommend the Checkout integration as it allows payment from the same coin without needing to set a secondary wallet.
 
@@ -72,7 +72,6 @@ It supports:
 
 ## Installation 
 
-
 ### Prerequisites
 SideShift account: Ensure you have an active SideShift account.
 - Account ID: Your unique identifier on SideShift.ai. It can also be used as the affiliateId to receive commissions.
@@ -81,13 +80,13 @@ Both can be acquired from https://sideshift.ai/account, you will find them on th
 
 
 Else the library only requires the fs and SideShift API module to work.
-Use this file from the repo: [sideshiftAPI.js](https://github.com/ryo-ohki-code/sideshift-api-node/blob/main/sideshiftAPI.js)
+[sideshiftAPI](https://github.com/ryo-ohki-code/sideshift-api-node/)
 
 ```bash
 git clone https://github.com/ryo-ohki-code/sideshift-payment-wrapper-node.git
 cd sideshift-payment-wrapper-node/
-wget -O Shift-Processor/sideshiftAPI.js https://raw.githubusercontent.com/ryo-ohki-code/sideshift-api-node/main/sideshiftAPI.js
 npm install fs
+git clone https://github.com/ryo-ohki-code/sideshift-api-node
 ```
 
 
@@ -119,7 +118,6 @@ const ICON_PATH = './public/icons';
 
 
 ## Configuration
-
 
 ### API Credentials
 ```
