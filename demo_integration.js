@@ -573,11 +573,21 @@ app.post("/create-payment", paymentLimiter, async function (req, res) {
 
 // polling system route
 app.get('/polling/api', async (req, res) => {
-    const { shiftId } = req.query;
+    try {
+        const { shiftId } = req.query;
 
-    let results = await cryptoPoller.getPollingShiftData(shiftId);
+        let results = await cryptoPoller.getPollingShiftData(shiftId);
 
-    res.json(results.shift);
+        if (!results) {
+            results = await shiftProcessor.sideshift.getShift(shiftId);
+            return res.json(results);
+        }
+
+        return res.json(results.shift);
+    } catch (err) {
+        console.error('Error in polling API:', err);
+        res.json(null);
+    }
 });
 
 // Global tracking object (for demo use)
