@@ -12,6 +12,9 @@ This library handles both integration methods:
 
 We recommend the Checkout integration as it allows payment from the same coin without needing to set a secondary wallet.
 
+Note: at this time Checkout do not support same coin shift. I hope this could evolve or I will update same coin support for checkout using 2 wallets.
+
+
 **Features**
 - Real-time payment processing
 - 250+ cryptocurrency support
@@ -79,8 +82,8 @@ SideShift account: Ensure you have an active SideShift account.
 Both can be acquired from https://sideshift.ai/account, you will find them on the dashboard
 
 
-Else the library only requires the fs and SideShift API module to work.
-[sideshiftAPI](https://github.com/ryo-ohki-code/sideshift-api-node/)
+Else the library only requires the fs and [sideshift-api-node](https://github.com/ryo-ohki-code/sideshift-api-node/) module to work.
+
 
 ```bash
 git clone https://github.com/ryo-ohki-code/sideshift-payment-wrapper-node.git
@@ -203,7 +206,7 @@ const shiftProcessor = new ShiftProcessor({
 ### Load the payment poller system
 The custom integration requires the polling system.
 
-Do not set this for checkout integration.
+Do not use for checkout integration.
 
 ```
 const PaymentPoller = require('./CryptoPaymentPoller.js');
@@ -219,11 +222,11 @@ const cryptoPoller = new PaymentPoller({
 ### Initialization
 To work, the module needs access to the SideShift coins list, which must be loaded at server start.
 
-parameter
+Parameter
 ICON_PATH (save path for the icons)
 
 ```
-await shiftProcessor.updateCoinsList(ICON_PATH)
+await shiftProcessor.updateCoinsList(ICON_PATH);
 ```
 
 
@@ -310,6 +313,7 @@ Create a webhook:
 ```
 setupSideShiftWebhook(WEBSITE_URL, process.env.SIDESHIFT_SECRET); //will set the webhook once and save the response into a file.
 ```
+
 Delete a webhook:
 ```
 setupSideShiftWebhook(process.env.SIDESHIFT_SECRET); // Delete the saved webhook
@@ -382,8 +386,7 @@ The function returns the appropriate wallet object based on:
 The usdToSettleAmount function is an asynchronous cryptocurrency conversion utility that calculates the appropriate cryptocurrency amount to shift based on a fiat deposit amount, considering exchange rates and network costs.
 
 Functionality:
-- Converts the input fiat amount to USD (from currencySetting.currency to USD)
- using the current exchange rate from getCurrencyConvertionRate()
+- Converts the input fiat amount to USD (from currencySetting.currency to USD) using the current exchange rate from getCurrencyConvertionRate()
 - Applies a 0.02% buffer to compensate for network fees and shift costs
 - Directly returns USD amount for stablecoins (USD-based coins)
 - For non-stablecoins, calculates the appropriate conversion ratio using _getRatio() method
@@ -430,7 +433,7 @@ returns pair object from the SideShift API:
 
 
 **createCryptocurrencyPayment({ depositCoin, depositNetwork, amountFiat, refundAddress = null, refundMemo = null, userIp = null, externalId = null })**: 
-The createCryptocurrencyPayment function is an asynchronous cryptocurrency shift creation utility that processes fiat amount into cryptocurrency settlements through the SideShift API. It Handles all necessary step to set the shift.
+The createCryptocurrencyPayment processes fiat amount into cryptocurrency shift request through the SideShift API. It Handles all necessary step to set the shift.
 
 Parameters
 - depositCoin: The deposit coin symbol (e.g., 1INCH)
@@ -475,9 +478,10 @@ cryptoPoller.addPayment(shift, shift.settleAddress, shift.settleAmount, customer
 ```
 
 Handle responses using:
-
-resetCryptoPayment()
-confirmCryptoPayment()
+```
+resetCryptoPayment();
+confirmCryptoPayment();
+```
 These functions manage internal state and trigger success/cancel logic based on the shift status.
 
 
@@ -653,16 +657,17 @@ Group all tests to verify shift availability
 
 
 **testMinMaxDeposit(depositCoinNetwork, settleCoinNetwork, settleAmount)**
-Test if amount is min < amount < max and return pair data
+Test if amount is minDeposit < amount < maxDeposit and return pair data
 
-return error or pairData
+return pairData or error
 
 
 **isUsdStableCoin(coin)**
-Test is coin is USD stable coin
+Test if coin is USD stable coin
 
 
 **isCoinMemo(coinNetwork)**
+Test if coin as a Memo
 
 
 **isThisCoinOrToken(coin, network)**:
@@ -693,9 +698,9 @@ Returns false if:
 
 
 **getDecimals(coin, network)**
-Get decimal precision for a coin/token.
+Get decimals precision for a coin/token.
 
-return null or decimal
+return decimals or null
 
 
 **usdToSettleCoin**
