@@ -283,81 +283,58 @@ if(shift)
 		}	
 
 		//- Update shift data
-		function autoRefresh() {
-			fetch('/polling/api?shiftId=' + shiftData.id)
-				.then(response => response.json())
-				.then(data => {
-					//- If no data try the SideShift API
-					if(!data){
-						fetch('https://sideshift.ai/api/v2/shifts/' + shiftData.id)						
-						.then(responseApi => responseApi.json())
-						.then(dataApi => {
-							data = dataApi;
-						})
-						.catch(errorApi => {
-							console.error('Error fetching SideShift API:', errorApi);
+		async function autoRefresh() {
+			try {
+				const response = await fetch('/polling/api?shiftId=' + shiftId);
+				let data = await response.json();
 
-						});
-						
+				if (!data) {
+					console.log("No data from polling API, trying SideShift API...");
+					const responseApi = await fetch('https://sideshift.ai/api/v2/shifts/' + shiftId);
+					data = await responseApi.json();
+				}
+
+				if (data) {
+					const statusContent = {
+						"waiting": `Waiting your ${data.depositCoin} (${data.depositNetwork}) payment`,
+						"pending": `${data.depositCoin} (${data.depositNetwork}) Payment detected, waiting confirmation`,
+						"processing": "Deposit confirmed",
+						"settling": "Payment near 100% completed",
+						"settled": "Payment completed !",
+						"expired": "Payment address expired !"
+					};
+
+					const content = statusContent[data.status] || "Invalid status";
+					const html = `<h2 class="${data.status}">${content}</h2>`;
+					toUpdateContainer.innerHTML = html;
+
+					if (iconContainer) {
+						iconContainer.style.display = data.status === "expired" ? 'none' : 'flex';
 					}
 
-					if (data) {
-						const statusContent = {
-							"waiting": `Waiting your ${data.depositCoin} (${data.depositNetwork}) payment`,
-							"pending": `${data.depositCoin} (${data.depositNetwork}) Payment detected, waiting confirmation`,
-							"processing": "Deposit confirmed",
-							"settling": "Payment near 100% completed",
-							"settled": "Payment completed !",
-							"expired": "Payment address expired !"
-						};
+					if (data.status === "settled" || data.status === "expired") {
+						clearInterval(pollInterval);
 
-						const content = statusContent[data.status] || "Invalid status";
-						const html = `<h2 class="${data.status}">${content}</h2>`;
-            
-						toUpdateContainer.innerHTML = html;
-
-						//- Update icon visibility based on status
-						if (iconContainer) {
-							if (data.status === "expired") {
-								iconContainer.style.display = 'none';
-							} else {
-								iconContainer.style.display = 'flex';
-							}
+						if (data.status === "settled") {
+							if (hashElement) hashElement.style.display = 'block';
+							document.getElementById('DEPOSIT_HASH').innerText = data.depositHash;
+							document.getElementById('SETTLE_HASH').innerText = data.settleHash;
 						}
 
-						//- Stop polling when payment is completed or expired and redirect user by reloading the page.
-						if (data.status === "settled" || data.status === "expired") {
-							clearInterval(pollInterval);
-							//- console.log('Polling stopped - Payment status:', data.status);
-
-							if (data.status === "settled"){
-								//- Add txhash
-								if (hashElement) hashElement.style.display = 'block';
-								document.getElementById('DEPOSIT_HASH').innerText = data.depositHash;
-								document.getElementById('SETTLE_HASH').innerText = data.settleHash;
-							}
-							
-							//- Display redirection message
-							infoElement.textContent = 'The page will redirect you automatically in 5 seconds...';
-
-							//-  Server will redirect to cancel or success page at reload.
-							setTimeout(() => {
-								location.reload();
-							}, 5000);
-						}
-					} else {
-						toUpdateContainer.innerHTML = '<div class="expired">No data received</div>';
-						//- Hide icon and containers on no data
-						hideElement();
+						infoElement.textContent = 'The page will redirect you automatically in 5 seconds...';
+						setTimeout(() => {
+							location.reload();
+						}, 5000);
 					}
-				})
-			.catch(error => {
+				} else {
+					toUpdateContainer.innerHTML = '<div class="expired">No data received</div>';
+					hideElement();
+				}
+			} catch (error) {
 				console.error('Error:', error);
 				toUpdateContainer.innerHTML = '<div class="expired">Error fetching shift data</div>';
-				//- Hide icon and containers on error
 				hideElement();
-
-			});
+			}
 		}
 		const pollInterval = setInterval(autoRefresh, UPDATE_TIMEOUT);
 
