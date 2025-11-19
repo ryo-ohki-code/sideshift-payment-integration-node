@@ -1,8 +1,8 @@
-# sideshift-API-payment-wrapper Node.js
+# sideshift-api-payment-toolkit Node.js
 
 This Node.js library **Simplifies cryptocurrency payment integration** for developers who want to accept crypto payments without building complex blockchain infrastructure.
 
-It enables cryptocurrency payments in your project by interacting with the [SideShift API](https://sideshift.ai/) using the [sideshift-api-node](https://github.com/ryo-ohki-code/sideshift-api-node) module. Allowing you to integrate cryptocurrency payment processing in any Node.js project with just a few tweaks. 
+It enables cryptocurrency payments in your project by interacting with the [SideShift API](https://sideshift.ai/a/9iuC2qrEj) using the [sideshift-api](https://www.npmjs.com/package/sideshift-api) module. Allowing you to integrate cryptocurrency payment processing in any Node.js project with just a few tweaks. 
 
 With real-time payment processing support, polling for transaction confirmations, 250+ cryptocurrencies and multi-currency support including USD, EUR, JPY, etc.
 
@@ -10,9 +10,6 @@ This library handles both integration methods:
 - Custom integration
 - [SideShift Pay](https://pay.sideshift.ai/) Checkout integration
 
-We recommend the Checkout integration as it allows payment from the same coin without needing to set a secondary wallet.
-
-Note: at this time Checkout do not support same coin shift. I hope this could evolve or I will update same coin support for checkout using 2 wallets.
 
 
 **Features**
@@ -76,20 +73,23 @@ It supports:
 ## Installation 
 
 ### Prerequisites
+
 SideShift account: Ensure you have an active SideShift account.
 - Account ID: Your unique identifier on SideShift.ai. It can also be used as the affiliateId to receive commissions.
 - Private Key: Your API secret key used for authentication.
 Both can be acquired from https://sideshift.ai/account, you will find them on the dashboard
 
+**Detailled explanation:** Navigate to [SideShift.ai](https://sideshift.ai/a/9iuC2qrEj), click on the "Account" option in the top right corner menu, and you will find your SideShift ID and Private Key on the dashboard (if this is your first visit, you will be prompted to save your private key)
 
-Else the library only requires the fs and [sideshift-api-node](https://github.com/ryo-ohki-code/sideshift-api-node/) module to work.
+
+
+Else the library only requires the fs and [sideshift-api](https://github.com/ryo-ohki-code/sideshift-api-node/) module to work.
 
 
 ```bash
 git clone https://github.com/ryo-ohki-code/sideshift-payment-wrapper-node.git
 cd sideshift-payment-wrapper-node/
-npm install fs
-git clone https://github.com/ryo-ohki-code/sideshift-api-node
+npm install fs sideshift-api
 ```
 
 
@@ -98,7 +98,7 @@ Sample configurations for demo_integration.js server.
 
 
 **Set .env file**
-```
+```bash
 SIDESHIFT_ID=Your_Sideshift_ID 
 SIDESHIFT_SECRET=Your_Sideshift_Secret
 WALLET_ADDRESS=0x...
@@ -114,7 +114,7 @@ node demo_integration.js
 
 📝 Note: At first start, it will download and store the coin icons.
 
-```
+```javascript
 // Path to store downloaded icons
 const ICON_PATH = './public/icons';
 ```
@@ -123,7 +123,7 @@ const ICON_PATH = './public/icons';
 ## Configuration
 
 ### API Credentials
-```
+```javascript
 const SIDESHIFT_ID = process.env.SIDESHIFT_ID; // "Your_sideshift_ID"; 
 const SIDESHIFT_SECRET = process.env.SIDESHIFT_SECRET; //"Your_shideshift_secret";
 const SIDESHIFT_CONFIG = {
@@ -134,12 +134,13 @@ const SIDESHIFT_CONFIG = {
 }
 ```
 
-How to get your API credentials?
-Visit [Sideshift Account Page](https://sideshift.ai/account), see "Prerequisites".
+**How to get your API credentials?**
+
+See "Prerequisites".
 
 
 ### Payment Settings
-```
+```javascript
 SHOP_SETTING.currency = "USD"; // Supported currencies: USD, EUR, JPY... (ISO 4217 code standard)
 SHOP_SETTING.USD_REFERENCE_COIN = "USDT-bsc"; // Must be a coin-network from the coinList
 ```
@@ -152,7 +153,7 @@ The custom integration requires two different wallets because the SideShift API 
 
 You can use 'custom integration' by setting only one wallet, but same coin shifts will throw an error. Using 'checkout integration' requires only one wallet setting.
 
-```
+```javascript
 const MAIN_WALLET = {
 	coin: "USDT",
 	network: "bsc",
@@ -184,7 +185,7 @@ const WALLETS = {
 
 
 ### Load the crypto payment processor
-```
+```javascript
 const ShiftProcessor = require('./ShiftProcessor.js')
 const shiftProcessor = new ShiftProcessor({
   wallets: WALLETS, // optional - needed to receive payment
@@ -195,7 +196,7 @@ const shiftProcessor = new ShiftProcessor({
 
 If you don't want to use a wallet, you can load the module without wallet settings. Without wallet settings, all wallet-related functions will be unavailable:
 
-```
+```javascript
 const ShiftProcessor = require('./ShiftProcessor.js')
 const shiftProcessor = new ShiftProcessor({
   sideshiftConfig: SIDESHIFT_CONFIG // Minimal required setting
@@ -208,7 +209,7 @@ The custom integration requires the polling system.
 
 Do not use for checkout integration.
 
-```
+```javascript
 const PaymentPoller = require('./CryptoPaymentPoller.js');
 const cryptoPoller = new PaymentPoller({
   shiftProcessor,
@@ -225,13 +226,13 @@ To work, the module needs access to the SideShift coins list, which must be load
 Parameter
 ICON_PATH (save path for the icons)
 
-```
+```javascript
 await shiftProcessor.updateCoinsList(ICON_PATH);
 ```
 
 
 **Sample integration**
-```
+```javascript
 // Start server after receiving the coin list from sideshift API
 shiftProcessor.updateCoinsList(ICON_PATH).then((response) => {
     console.log('Initial coins list loaded');
@@ -285,7 +286,8 @@ Other usage example: '/paywall'
 
 ## Checkout Integration Guide
 It is simple as this:
-```
+
+```javascript
 const checkout = await shiftProcessor.requestCheckout({
     settleCoin: settleCoin,
     settleNetwork: settleNetwork,
@@ -310,12 +312,12 @@ Refer to /checkout/:status/:orderId/:secret" route for success and cancel status
 Checkout must be used with the webhook notification system. The webhook-manager helps set up the webhook connection and '/api/webhooks/sideshift' POST route. You can use webhookDataConfirmation to validate incoming data.
 
 Create a webhook:
-```
+```javascript
 setupSideShiftWebhook(WEBSITE_URL, process.env.SIDESHIFT_SECRET); //will set the webhook once and save the response into a file.
 ```
 
 Delete a webhook:
-```
+```javascript
 setupSideShiftWebhook(process.env.SIDESHIFT_SECRET); // Delete the saved webhook
 ```
 
@@ -332,12 +334,12 @@ Parameters
 - totalFiat (e.g., 100.05)
 - depositCoinNetwork (e.g., ETH-ethereum)
 
-```
+```javascript
 const data = await shiftProcessor.getSettlementData(Number(totalFiat), depositCoinNetwork); 
 ```
 
 Return
-```
+```json
 {
   settleData: { // Your destination wallet information
     coin: 'USDT',
@@ -369,7 +371,7 @@ pairData: Exchange pair information including rate, minimum, and maximum limits
 **getSettleWallet(depositCoin)**: Test deposit coin to set settle address
 The getSettleWallet function is a wallet selection mechanism that determines which wallet should be used as the destination for settlement operations based on the input coin type and current wallet availability.
 
-```
+```javascript
 const depositCoin = ['BNB-bsc', false]; // ['COIN-network', false] or ['COIN-network', "Memo"]
 const settleWallet = shiftProcessor.getSettleWallet(depositCoin); 
 ```
@@ -395,7 +397,8 @@ Parameters
 - amount FIAT currency (e.g., 100.54)
 - from (e.g., BTC-bitcoin)
 - to (e.g., ETH-ethereum)
-```
+
+```javascript
 const amount = await shiftProcessor.usdToSettleAmount(amount, from, to);
 ```
 
@@ -411,12 +414,13 @@ Get all information about a pair, rate, minimum and maximum deposit, ...
 Parameters 
 - from (e.g., BTC-bitcoin)
 - to (e.g., ETH-ethereum)
-```
+
+```javascript
 const getPairData = await shiftProcessor.sideshift.getPair(from, to);
 ```
 
 returns pair object from the SideShift API:
-```
+```json
 {
   "min": "0.0.00010771",
   "max": "1.43608988",
@@ -442,12 +446,12 @@ Parameters
 - userIp (optional): IP address for user tracking and security (e.g., 123.123.123.123)
 - externalId (optional): External identifier for tracking purposes
 
-```
+```javascript
 const shift = await shiftProcessor.createCryptocurrencyPayment({depositCoin, depositNetwork, amountFiat, userIp});
 ```
 
 return
-```
+```json
 {
   id: '8c9ba87d02a801a2f254',
   createdAt: '2025-09-25T22:20:54.256Z',
@@ -472,13 +476,13 @@ return
 
 After creating a shift, start polling for status updates:
 
-```
+```javascript
 cryptoPoller.addPayment(shift, shift.settleAddress, shift.settleAmount, customerOrderId);
 
 ```
 
 Handle responses using:
-```
+```javascript
 resetCryptoPayment();
 confirmCryptoPayment();
 ```
@@ -529,7 +533,7 @@ Refer to the handleCryptoShift middleware and routes: /payment-status, /success/
 **requestQuoteAndShift()**
 One-step creation of a fixed shift.
 
-```
+```javascript
 requestQuoteAndShift({
     depositCoin,
     depositNetwork,
@@ -551,7 +555,7 @@ return fixed shift response
 **createFixedShiftFromUsd()**
 Create a fixed rate shift using an USD/fiat amount with manual wallet setting.
 
-```
+```javascript
 createFixedShiftFromUsd({
     depositCoin,
     depositNetwork,
@@ -574,14 +578,14 @@ Automatically selects one of the configured wallets and creates a variable shift
 
 return 
 ```
-variable variable response
+variable shift response
 ```
 
 
 **requestCheckout()**
 Initiates a checkout request via SideShift UI.
 
-```
+```javascript
 requestCheckout({
     settleCoin,
     settleNetwork,
@@ -599,7 +603,7 @@ return checkout response
 
 **Full SideShift API integration**
 You can also call any SideShift API endpoint by using (see [sideshift-api-node](https://github.com/ryo-ohki-code/sideshift-api-node) )
-```
+```javascript
 shiftProcessor.sideshift['endpoint_name']
 ```
 
@@ -613,7 +617,7 @@ Parameter
 destination: The file path or destination where coin icons should be downloaded (e.g., "/icons/")
 
 return
-```
+```json
 { availableCoins: [availableCoins], lastCoinList: [lastCoinList], rawCoinList: {rawCoinList}, networkExplorerLinks: {networkLinks} }
 ```
 availableCoins: Complete list of available coin-network ([['COIN-network', false], ['COIN-network', "Memo"], ...])
@@ -636,7 +640,7 @@ returns same as updateCoinsList.
 Check if a coin-network exists in the SideShift API.
 
 
-```
+```javascript
 shiftProcessor.isCoinValid("ETH-bitcoin") // false
 shiftProcessor.isCoinValid("ETH-ethereum") // true
 ```
@@ -726,20 +730,20 @@ Parameters
 
 The extractIPInfo function is a comprehensive IP address validator and parser that processes incoming IP addresses and returns structured information about their type and validity. It handles both IPv4 and IPv6 addresses, including IPv4-mapped IPv6 addresses (prefixed with ::ffff:)
 
-```
+```javascript
 shiftProcessor.extractIPInfo(req.ip)
 ```
 
 
 **Sanitization & Validation**
 Sanitize string and number:
-```
+```javascript
 shiftProcessor.sanitizeString(input)
 shiftProcessor.sanitizeNumber(input)
 ```
 
 Validate string and number:
-```
+```javascript
 shiftProcessor.validateString(input)
 shiftProcessor.validateNumber(input)
 ```
@@ -749,9 +753,11 @@ shiftProcessor.validateNumber(input)
 Check the online status for deposit and settle coin-network.
 
 return object with Boolean
-```
+```json
 { isDepositOffline: false, isSettleOffline: false, isShiftOnline: true };
+```
 or
+```json
 { isDepositOffline: false, isSettleOffline: true, isShiftOnline: false };
 ```
 isShiftOnline indicate if both deposit and settle are online.
@@ -761,7 +767,7 @@ isShiftOnline indicate if both deposit and settle are online.
 Organize networks, coins and tokens into categorized lists.
 
 Return an object with supportedNetworks, mainnetCoins and tokenByChain
-```
+```json
 { 
     supportedNetworks: supportedNetworksArray,
     mainnetCoins: mainnetCoinsArray,
